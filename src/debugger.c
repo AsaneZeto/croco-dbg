@@ -23,7 +23,7 @@ void dbg_command_handler(debugger_t *dbg, char *cmd)
 {   
     char _cmd[MAX_CMD_BUFFER];
     strncpy(_cmd, cmd, strlen(cmd)+1);
-    
+
     char *_argv[MAX_ARGC];
     int _argc = 0;
     char *token = strtok(_cmd, " ");
@@ -45,7 +45,6 @@ void dbg_command_handler(debugger_t *dbg, char *cmd)
     };
 
     if(strcmp(_argv[0], "cont") || strcmp(_argv[0], "continue")) {
-        printf("Continue\n");
         dbg_continue(dbg);
     } else {
         fprintf(stderr, "Unknown Command\n");
