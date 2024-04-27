@@ -26,12 +26,13 @@ int main(int argc, char *argv[]) {
 
         if(!dbg) {
             fprintf(stderr, "Failed allocating memory\n");
-            abort();
+            exit(1);
         }
 
         dbg_init(dbg, pid, prog);
         dbg_run(dbg);
         dbg_close(dbg);
+        free(dbg);
     }
 
     return 0;
