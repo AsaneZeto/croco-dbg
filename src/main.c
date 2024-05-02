@@ -4,7 +4,6 @@
 #include <errno.h>
 
 #include "debugger.h"
-#include "debuggee.h"
 
 static char *prog;
 
@@ -18,12 +17,13 @@ int main(int argc, char *argv[]) {
     pid_t pid = fork();
 
     if(pid == 0) {
-        // Child Process : Tracee
+        /* Child Process : Tracee */
         dbe_start(prog);
     } else if(pid >= 1) {
-        // Parent Process : Tracer
-        debugger_t *dbg = malloc(sizeof(debugger_t));
-
+        /* Parent Process : Tracer */
+        printf("%d\n", pid);
+        debugger_t *dbg = calloc(1, sizeof(debugger_t));
+        
         if(!dbg) {
             fprintf(stderr, "Failed allocating memory\n");
             exit(1);
@@ -32,7 +32,6 @@ int main(int argc, char *argv[]) {
         dbg_init(dbg, pid, prog);
         dbg_run(dbg);
         dbg_close(dbg);
-        free(dbg);
     }
 
     return 0;

@@ -26,4 +26,4 @@ $(TARGET): $(COBJ)
 clean:
 	$(RM) $(COBJ)
 	$(RM) $(TARGET)
-	$(RM) $(BUILD_DIR)/*.o
+	$(RM) $(BUILDDIR)/*.o $(BUILDDIR)/*.d
