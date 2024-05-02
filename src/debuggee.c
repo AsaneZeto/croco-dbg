@@ -34,7 +34,6 @@ bool dbe_set_bp(debuggee_t *dbe, uintptr_t *addr_p)
     }
      
     // breakpoint_t bp;
-    printf("%d\n", container_of(dbe, debugger_t, dbe)->pid);
     bp_init(&dbe->bp[dbe->nBp], container_of(dbe, debugger_t, dbe)->pid, *addr_p);
     bp_enable(&dbe->bp[dbe->nBp]);
 

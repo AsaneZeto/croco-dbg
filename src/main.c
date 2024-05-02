@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
         dbe_start(prog);
     } else if(pid >= 1) {
         /* Parent Process : Tracer */
-        printf("%d\n", pid);
+        printf("Start debugging process %d\n", pid);
         debugger_t *dbg = calloc(1, sizeof(debugger_t));
         
         if(!dbg) {

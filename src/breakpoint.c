@@ -4,8 +4,7 @@
 
 #include "breakpoint.h"
 
-// static uint8_t INT3 = 0xcc;
-const uint8_t INT3[1] = {0xcc};
+static uint8_t INT3 = 0xcc;
 
 void bp_init(breakpoint_t *bp, pid_t pid, uintptr_t addr)
 {
@@ -18,11 +17,9 @@ void bp_init(breakpoint_t *bp, pid_t pid, uintptr_t addr)
 
 void bp_enable(breakpoint_t *bp)
 {
-    printf("0x%lx\n", bp->addr);
     size_t data = ptrace(PTRACE_PEEKDATA, bp->pid, (void *) bp->addr, NULL);
     bp->saved_data = (uint8_t)(data & 0xff);
-    size_t data_with_int3 = data;
-    memcpy(&data_with_int3, INT3, sizeof(INT3));
+    size_t data_with_int3 = ((data & ~0xff) | INT3);
     ptrace(PTRACE_POKEDATA, bp->pid, (void *) bp->addr, data_with_int3);
 
     bp->is_enable = true;
