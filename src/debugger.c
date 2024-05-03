@@ -10,6 +10,7 @@
 #include "linenoise.h"
 #include "tools.h"
 #include "hashtbl.h"
+#include "register.h"
 
 void dbg_continue(debugger_t *dbg)
 {
@@ -69,6 +70,39 @@ void dbg_command_handler(debugger_t *dbg, char *cmd)
             fprintf(stderr, "Unknown argument.\n");
         }
 
+    } else if (strcmp(_argv[0], "reg") == 0) {
+        if (strcmp(_argv[1], "dump") == 0) {
+            reg_dump(dbg->pid);
+        } else if (strcmp(_argv[1], "read") == 0) {
+            if (strlen(_argv[2]) == 0) {
+                fprintf(stderr, "Invalid register.\n");
+                return;
+            }
+            reg_idx r = reg_get_idx_name(_argv[2]);
+            size_t value;
+            reg_get_value(dbg->pid, r, &value);
+            printf("%s: 0x%lx\n", _argv[2], value);
+        } else if (strcmp(_argv[1], "write") == 0) {
+            if (strlen(_argv[2]) == 0) {
+                fprintf(stderr, "Invalid register.\n");
+                return;
+            }
+
+            reg_idx r = reg_get_idx_name(_argv[2]);
+            printf("%d\n", r);
+            
+            char *end;
+            size_t value = strtoul(_argv[3], &end, 10);
+
+            if ((end == _argv[3]) || (*end != '\0')) {
+                fprintf(stderr, "Invalid value.\n");
+                return;
+            }
+
+            reg_set_value(dbg->pid, r, value);
+        } else {
+            fprintf(stderr, "Unknown argument.\n");
+        }
     } else {
         fprintf(stderr, "Unknown Command\n");
     }

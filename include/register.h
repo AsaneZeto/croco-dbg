@@ -1,7 +1,10 @@
 #ifndef REGISTER_H
 #define REGISTER_H
 
+#include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
+#include <sys/types.h>
 
 #ifdef __x86_64__
 #define N_REG 27
@@ -29,7 +32,7 @@ typedef struct {
 } reg_descriptor_t;
 
 /* The layout follows usr/include/sys/user.h */
-const reg_descriptor_t reg_descriptors[N_REG] = {
+static const reg_descriptor_t reg_descriptors[N_REG] = {
     { r15, 15, "r15" },
     { r14, 14, "r14" },
     { r13, 13, "r13" },
@@ -59,17 +62,18 @@ const reg_descriptor_t reg_descriptors[N_REG] = {
     { gs, 55, "gs" },
 };
 
+void reg_dump(pid_t pid);
 
-bool get_reg_value(pid_t pid, reg_idx r, size_t *value);
-bool get_reg_value_dwf(pid_t pid, int dwarf_r, size_t *value);
-bool get_reg_value_name(pid_t pid, const char *name, size_t *value);
+bool reg_get_value(pid_t pid, reg_idx r, size_t *value);
+bool reg_get_value_dwf(pid_t pid, int dwarf_r, size_t *value);
+bool reg_get_value_name(pid_t pid, const char *name, size_t *value);
 
-bool set_reg_value(pid_t pid, reg_idx r, size_t value);
+bool reg_set_value(pid_t pid, reg_idx r, size_t value);
 
-char *get_reg_name(size_t r);
+const char *reg_get_name(reg_idx r);
 
-reg_idx get_reg_idx_dwf(int dwarf_r);
-reg_idx get_reg_idx_name(const char *name);
+reg_idx reg_get_idx_dwf(int dwarf_r);
+reg_idx reg_get_idx_name(const char *name);
 
 #else
 #error "Unsupported Architecture"

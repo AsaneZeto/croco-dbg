@@ -64,3 +64,22 @@ void dbe_dump_bp(debuggee_t *dbe)
         printf("0x%lx\n", *data);
     }
 }
+
+size_t dbe_read_mem(debuggee_t *dbe, uintptr_t addr)
+{
+    return ptrace(PTRACE_PEEKDATA, container_of(dbe, debugger_t, dbe)->pid,
+                 (void *)addr, NULL);
+}
+
+bool dbe_write_mem(debuggee_t *dbe, uintptr_t addr, size_t value)
+{
+    int ret = ptrace(PTRACE_POKEDATA, container_of(dbe, debugger_t, dbe)->pid,
+                    (void *)addr, value);
+
+    if(ret == -1) {
+        fprintf(stderr, "ERROR: write memory.\n");
+        return false;
+    }
+
+    return true;
+}
