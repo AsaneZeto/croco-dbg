@@ -12,8 +12,32 @@
 #include "hashtbl.h"
 #include "register.h"
 
+void dbg_step_bp(debugger_t *dbg)
+{   
+    /* Get next instruction */
+    size_t pc = 0;
+    reg_get_value(dbg->pid, rip, &pc);
+    uintptr_t addr = (uintptr_t)(pc - 1);
+    
+    char key[17];
+    snprintf(key, 17, "%lx", addr);
+    size_t *data = NULL;
+    if(hashtbl_search(dbg->dbe.hashtbl, key, (void **)&data)) {
+        uintptr_t prev_inst = addr;
+        reg_set_value(dbg->pid, rip, (size_t)prev_inst);
+
+        size_t idx = *data - 1;
+        bp_disable(&dbg->dbe.bp[idx]);
+        ptrace(PTRACE_SINGLESTEP, dbg->pid, NULL, NULL);
+        wait_for_signal(dbg->pid);
+        bp_enable(&dbg->dbe.bp[idx]);
+    }
+    return;
+}
+
 void dbg_continue(debugger_t *dbg)
-{
+{   
+    dbg_step_bp(dbg);
     ptrace(PTRACE_CONT, dbg->pid, NULL, NULL);
     wait_for_signal(dbg->pid);
 }
@@ -89,7 +113,6 @@ void dbg_command_handler(debugger_t *dbg, char *cmd)
             }
 
             reg_idx r = reg_get_idx_name(_argv[2]);
-            printf("%d\n", r);
             
             char *end;
             size_t value = strtoul(_argv[3], &end, 10);
@@ -128,6 +151,7 @@ void dbg_run(debugger_t *dbg)
 }
 
 void dbg_close(debugger_t *dbg)
-{
+{   
+    dbe_close(&dbg->dbe);
     free(dbg);
 }

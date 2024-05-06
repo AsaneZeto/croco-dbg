@@ -13,6 +13,7 @@ typedef struct {
 
 void dbe_init(debuggee_t *dbe);
 void dbe_start(const char *prog);
+void dbe_close(debuggee_t *dbe);
 bool dbe_set_bp(debuggee_t *dbe, uintptr_t *addr_p);
 void dbe_dump_bp(debuggee_t *dbe);
 size_t dbe_read_mem(debuggee_t *dbe, uintptr_t addr);

@@ -26,7 +26,7 @@ bool reg_get_value(pid_t pid, reg_idx r, size_t *value)
 
     struct user_regs_struct regs;
     ptrace(PTRACE_GETREGS, pid, NULL, &regs);
-    *value = *(size_t *)(&regs + r);
+    *value = *((size_t *)(&regs) + r);
     return true;
 }
 

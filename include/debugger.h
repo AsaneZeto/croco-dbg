@@ -27,5 +27,6 @@ void dbg_quit(debugger_t *dbg);
 
 /* Breakpoints*/
 void dbg_set_bp(debugger_t *dbg, uintptr_t addr);
+void dbg_step_bp(debugger_t *dbg);
 
 #endif

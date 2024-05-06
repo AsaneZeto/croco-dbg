@@ -37,7 +37,7 @@ bool dbe_set_bp(debuggee_t *dbe, uintptr_t *addr_p)
     bp_init(&dbe->bp[dbe->nBp], container_of(dbe, debugger_t, dbe)->pid, *addr_p);
     bp_enable(&dbe->bp[dbe->nBp]);
 
-    if(!hashtbl_add(dbe->hashtbl, dbe->bp[dbe->nBp].addr_key, (void*)addr_p)) {
+    if(!hashtbl_add(dbe->hashtbl, dbe->bp[dbe->nBp].addr_key, (void*)&dbe->nBp)) {
         fprintf(stderr, "Failed record breakpoint.\n");
         return false;
     }
@@ -58,10 +58,10 @@ void dbe_dump_bp(debuggee_t *dbe)
         return;
     }
     
-    uintptr_t *data = NULL;
+    size_t *data = NULL;
     for(size_t i = 0; i < dbe->nBp; i++) {
         hashtbl_search(dbe->hashtbl, dbe->bp[i].addr_key, (void **) &data);
-        printf("0x%lx\n", *data);
+        printf("Breakpoints %ld: 0x%s\n", *data - 1, dbe->bp[i].addr_key);
     }
 }
 
@@ -82,4 +82,9 @@ bool dbe_write_mem(debuggee_t *dbe, uintptr_t addr, size_t value)
     }
 
     return true;
+}
+
+void dbe_close(debuggee_t *dbe)
+{
+    hashtbl_destroy(dbe->hashtbl);
 }
