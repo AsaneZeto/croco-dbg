@@ -4,12 +4,9 @@
 #include <stdlib.h>
 #include <signal.h> 
 
-#include "breakpoint.h"
-#include "debuggee.h"
 #include "debugger.h"
 #include "linenoise.h"
 #include "tools.h"
-#include "hashtbl.h"
 #include "register.h"
 
 static debugger_t *tdb;
