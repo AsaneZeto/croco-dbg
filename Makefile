@@ -1,4 +1,4 @@
-CFLAGS = -Wextra -Wall -D_GNU_SOURCE -g -MMD -Iinclude -Iext/linenoise 
+CFLAGS = -Wextra -Wall -Wno-unused-parameter -D_GNU_SOURCE -g -MMD -Iinclude -Iext/linenoise 
 
 BUILDDIR ?= build
 CURDIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
