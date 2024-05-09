@@ -31,6 +31,7 @@ typedef struct {
 
 typedef struct {
     char *opt;
+    char *description;
     cmdhandler_t handler;
     struct list_head list;
 } cmd_opt_t;

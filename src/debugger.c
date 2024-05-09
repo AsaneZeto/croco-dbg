@@ -43,7 +43,8 @@ static cmdhandler_t _dbg_find_handler(struct list_head *head, char *opt)
 }
 
 
-static bool dbg_add_command(debugger_t *dbg, char *cmd, char *abbr, cmdhandler_t handler, char *description)
+static bool dbg_add_command(debugger_t *dbg, char *cmd, char *abbr,
+                            cmdhandler_t handler, char *description)
 {
     cmd_element_t *node = (cmd_element_t *)malloc(sizeof(cmd_element_t));
 
@@ -62,7 +63,8 @@ static bool dbg_add_command(debugger_t *dbg, char *cmd, char *abbr, cmdhandler_t
     return true;
 }
 
-static bool dbg_add_option(debugger_t *dbg, char *cmd, char *opt, cmdhandler_t handler)
+static bool dbg_add_option(debugger_t *dbg, char *cmd, char *opt, 
+                           cmdhandler_t handler, char *description)
 {   
     if(!dbg)
         return false;
@@ -89,6 +91,7 @@ static bool dbg_add_option(debugger_t *dbg, char *cmd, char *opt, cmdhandler_t h
 
     node_opt->opt = opt;
     node_opt->handler = handler;
+    node_opt->description = description;
 
     INIT_LIST_HEAD(&node_opt->list);
     list_add_tail(&node_opt->list, &node_cmd->options);
@@ -287,6 +290,22 @@ static bool do_quit(int argc, char *argv[])
     return true;
 }
 
+static bool do_help(int argc, char *argv[])
+{   
+    cmd_element_t *ptr;
+    list_for_each_entry(ptr, &tdb->list, list) {
+        printf("%s (%s): %s\n", ptr->cmd, ptr->abbr, ptr->description);
+        if(!list_empty(&ptr->options)) {
+            cmd_opt_t *pptr;
+            list_for_each_entry(pptr, &ptr->options, list) {
+                printf("\t%5s\n", pptr->description);
+            }
+        }
+    }
+
+    return true;
+}
+
 static char **dbg_command_parser(debugger_t *dbg, char *cmd, int *argc)
 {   
     char _cmd[MAX_CMD_BUFFER];
@@ -322,19 +341,20 @@ void dbg_init(debugger_t *dbg, pid_t pid, const char *prog)
     dbg->prog = prog;
 
     INIT_LIST_HEAD(&dbg->list);
+    dbg_add_command(dbg, "help", "h", do_help, "Show command description");
     dbg_add_command(dbg, "continue", "cont", do_continue, "Restart the stopped tracee process");
     dbg_add_command(dbg, "quit", "q", do_quit, "Quit tinydbg");
     dbg_add_command(dbg, "break", "b", do_break, "Set breakpoint");
-    dbg_add_option(dbg, "break", "dump", do_break_dump);
+    dbg_add_option(dbg, "break", "dump", do_break_dump, "Dump: all breakpoint (if any)");
 
     dbg_add_command(dbg, "reg", "r", do_reg_mem, "Register oprations");
-    dbg_add_option(dbg, "reg", "dump", do_reg_dump);
-    dbg_add_option(dbg, "reg", "read", do_reg_read);
-    dbg_add_option(dbg, "reg", "write", do_reg_write);
+    dbg_add_option(dbg, "reg", "dump", do_reg_dump, "dump: Dump all register information");
+    dbg_add_option(dbg, "reg", "read", do_reg_read, "read {register}: Read value from a register");
+    dbg_add_option(dbg, "reg", "write", do_reg_write, "write {register}: Write value to a register");
 
     dbg_add_command(dbg, "mem", "m", do_reg_mem, "Memory oprations");
-    dbg_add_option(dbg, "mem", "read", do_mem_read);
-    dbg_add_option(dbg, "mem", "write", do_mem_write);
+    dbg_add_option(dbg, "mem", "read", do_mem_read, "read {0xADDRESS}: Read value from an address");
+    dbg_add_option(dbg, "mem", "write", do_mem_write, "write {0xADDRESS} {VALUE}: Write value to an address");
 
     dbe_init(&dbg->dbe);
 
