@@ -1,7 +1,7 @@
 #ifndef DEBUGGER_H
 #define DEBUGGER_H
 
-#define MAX_CMD_BUFFER 1024
+#define MAX_BUFFER 1024
 #define MAX_ARGC 16
 
 #include <sys/ptrace.h>

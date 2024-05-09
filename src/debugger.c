@@ -306,9 +306,31 @@ static bool do_help(int argc, char *argv[])
     return true;
 }
 
+static bool do_vmmap(int argc, char *argv[]) {
+    char path[MAX_BUFFER];
+    snprintf(path, sizeof(path), "/proc/%d/maps", tdb->pid);
+    FILE *f = fopen(path, "r");
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t nread;
+
+    if(!f) {
+        fprintf(stderr, "ERROR: Access information of mapped memory region of process %d\n", tdb->pid);
+        return false;
+    }
+
+    while((nread = getline(&line, &len, f)) != -1) {
+        printf("%s", line);
+    }
+
+    free(line);
+    fclose(f);
+    return true;
+}
+
 static char **dbg_command_parser(debugger_t *dbg, char *cmd, int *argc)
 {   
-    char _cmd[MAX_CMD_BUFFER];
+    char _cmd[MAX_BUFFER];
     strncpy(_cmd, cmd, strlen(cmd)+1);
 
     char **_argv = calloc(MAX_ARGC, sizeof(char *));
@@ -350,11 +372,13 @@ void dbg_init(debugger_t *dbg, pid_t pid, const char *prog)
     dbg_add_command(dbg, "reg", "r", do_reg_mem, "Register oprations");
     dbg_add_option(dbg, "reg", "dump", do_reg_dump, "dump: Dump all register information");
     dbg_add_option(dbg, "reg", "read", do_reg_read, "read {register}: Read value from a register");
-    dbg_add_option(dbg, "reg", "write", do_reg_write, "write {register}: Write value to a register");
+    dbg_add_option(dbg, "reg", "write", do_reg_write, "write {register} {VALUE}: Write value to a register");
 
     dbg_add_command(dbg, "mem", "m", do_reg_mem, "Memory oprations");
     dbg_add_option(dbg, "mem", "read", do_mem_read, "read {0xADDRESS}: Read value from an address");
     dbg_add_option(dbg, "mem", "write", do_mem_write, "write {0xADDRESS} {VALUE}: Write value to an address");
+
+    dbg_add_command(dbg, "vmmap", "vmmap", do_vmmap, "Show virtual memory layout");
 
     dbe_init(&dbg->dbe);
 
