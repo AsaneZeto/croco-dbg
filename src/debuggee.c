@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/personality.h>
 #include <sys/ptrace.h>
 #include <unistd.h>
 
@@ -13,17 +12,6 @@ void dbe_init(debuggee_t *dbe)
     dbe->hashtbl = calloc(1, sizeof(hashtbl_t));
     hashtbl_create(MAX_BP, dbe->hashtbl);
     dbe->nBp = 0;
-}
-
-
-void dbe_start(const char *prog) 
-{
-    personality(ADDR_NO_RANDOMIZE); /* Disable ASLR */
-    if(ptrace(PTRACE_TRACEME, 0, 0, 0) < 0) {
-        fprintf(stderr, "Error in ptrace\n");
-        return;
-    }
-    execl(prog, prog, NULL);
 }
 
 bool dbe_set_bp(debuggee_t *dbe, uintptr_t *addr_p)

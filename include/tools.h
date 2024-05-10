@@ -10,5 +10,6 @@
     })
 
 void wait_for_signal(pid_t pid);
+void exec_prog(const char *prog);
 
 #endif

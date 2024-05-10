@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include "tools.h"
 #include "debugger.h"
 
 static char *prog;
@@ -18,7 +19,7 @@ int main(int argc, char *argv[]) {
 
     if(pid == 0) {
         /* Child Process : Tracee */
-        dbe_start(prog);
+        exec_prog(prog);
     } else if(pid >= 1) {
         /* Parent Process : Tracer */
         printf("Start debugging process %d\n", pid);
