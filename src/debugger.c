@@ -357,10 +357,24 @@ static char **dbg_command_parser(debugger_t *dbg, char *cmd, int *argc)
     return _argv;
 }
 
+static void init_load_addr(debugger_t *dbg)
+{
+    char path[MAX_BUFFER];
+    snprintf(path, sizeof(path), "/proc/%d/maps", dbg->pid);
+    FILE *f = fopen(path, "r");
+    char *line = NULL;
+    size_t len = 0;
+    getdelim(&line, &len, '-', f);
+    sscanf(line, "%lx", &dbg->load_addr);
+    fclose(f);
+}
+
 void dbg_init(debugger_t *dbg, pid_t pid, const char *prog)
 {
     dbg->pid = pid;
     dbg->prog = prog;
+
+    init_load_addr(dbg);
 
     INIT_LIST_HEAD(&dbg->list);
     dbg_add_command(dbg, "help", "h", do_help, "Show command description");

@@ -16,6 +16,7 @@ typedef bool (*cmdhandler_t)(int argc, char *argv[]);
 typedef struct {
     pid_t pid;
     const char *prog;         /* Program name */
+    uintptr_t load_addr;      /* Program counter base */
     struct list_head list;    /* Each node represents a command */
     debuggee_t dbe;           /* Maintains debuge information */
 } debugger_t;
