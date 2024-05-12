@@ -197,3 +197,52 @@ void dw_get_line_by_addr(dw_context_t *dw_ctx, Dwarf_Line *ret_line, uintptr_t a
         }
     }
 }
+
+
+static void _print_source(char *src_file, char *func_name, int lineno)
+{
+    FILE *f = fopen(src_file, "r");
+    char *line = NULL;
+    size_t len = 0;
+    int nread = 0;
+    while(nread < lineno && (getline(&line, &len, f) != -1)) {
+        nread++;
+    }
+
+    fprintf(stdout, "Stopped at line %d, in %s():\n", lineno, func_name);
+    fprintf(stdout, "%s\n", line);
+    fclose(f);
+}
+
+void dw_print_source(dw_context_t *dw_ctx, uintptr_t addr)
+{
+    Dwarf_Die func_die = NULL;
+    dw_get_func_die_by_addr(dw_ctx, &func_die, addr);
+
+    if(!func_die) {
+        fprintf(stderr, "Get DIE failed\n");
+        return;
+    } 
+
+    char *func_name = NULL;
+    dwarf_diename(func_die, &func_name, &dw_ctx->error);
+    dwarf_dealloc(dw_ctx->dbg, func_die, DW_DLA_DIE);
+
+    Dwarf_Line line_entry = NULL;
+    dw_get_line_by_addr(dw_ctx, &line_entry, addr);
+    if(!line_entry) {
+        fprintf(stderr, "Get line entry failed\n");
+        return; 
+    } 
+
+    Dwarf_Unsigned line_no = 0;
+    char *src_file = NULL;
+    dwarf_lineno(line_entry, &line_no, &dw_ctx->error);
+    dwarf_linesrc(line_entry, &src_file, &dw_ctx->error);
+
+    if(src_file == NULL) {
+        fprintf(stderr, "Get source file failed\n");
+    }
+
+    _print_source(src_file, func_name, line_no);
+}

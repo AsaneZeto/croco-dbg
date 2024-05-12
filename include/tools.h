@@ -9,7 +9,6 @@
         (type *) ((char *) __pmember - offsetof(type, member));    \
     })
 
-void wait_for_signal(pid_t pid);
 void exec_prog(const char *prog);
 uintptr_t get_pc(pid_t pid);
 void set_pc(pid_t pid, uintptr_t addr);

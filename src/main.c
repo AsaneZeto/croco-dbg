@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "tools.h"
 #include "debugger.h"
@@ -29,6 +31,11 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Failed allocating memory\n");
             exit(1);
         }
+
+        /* Wait for lauching debuggee first */
+        int wait_status;
+        int options = 0;
+        waitpid(pid, &wait_status, options);
 
         dbg_init(dbg, pid, prog);
         dbg_run(dbg);

@@ -1,8 +1,9 @@
 #include <stdio.h>
-#include <sys/types.h>
 #include <string.h>
 #include <stdlib.h>
 #include <signal.h> 
+#include <sys/wait.h>
+#include <sys/types.h>
 
 #include "debugger.h"
 #include "linenoise.h"
@@ -11,6 +12,56 @@
 
 static debugger_t *tdb;
 static cmd_element_t *curr_cmd = NULL;
+
+
+static uintptr_t addr_offset(debugger_t *dbg, uintptr_t addr)
+{
+    return addr - dbg->load_addr;
+}
+
+static void handle_sigtrap(debugger_t *dbg, siginfo_t info)
+{
+    switch (info.si_code) {
+        case SI_KERNEL:
+        case TRAP_BRKPT:
+            /* IF trapped, set PC as current position */
+            set_pc(dbg->pid, get_pc(dbg->pid)-1);
+
+            uintptr_t addr = get_pc(dbg->pid);
+            fprintf(stdout, "Hit breakpoint 0x%lx\n", addr);
+            dw_print_source(&dbg->dw_ctx, addr_offset(dbg, addr));
+            break;
+        case TRAP_TRACE:
+            break;
+        default:
+            break;
+    }
+
+    return;
+}
+
+static void wait_for_signal(debugger_t *dbg)
+{   
+    /* Parent handles the signals from child process */
+    int wait_status;
+    int options = 0;
+    waitpid(dbg->pid, &wait_status, options);
+
+    siginfo_t siginfo;
+    ptrace(PTRACE_GETSIGINFO, dbg->pid, NULL, &siginfo); /* Get signal from child */
+
+    switch (siginfo.si_signo) {
+        case SIGTRAP:
+            handle_sigtrap(dbg, siginfo);
+            break;
+        case SIGSEGV:
+            fprintf(stderr, "SIGSEGV, Signal code: %d\n", siginfo.si_code);
+            break;
+        default:
+            // fprintf(stdout, "Got signal %s\n", strsignal(siginfo.si_signo));
+            break;
+    }
+}
 
 /* Find the command handler */
 static cmdhandler_t dbg_find_handler(char *cmd)
@@ -258,15 +309,13 @@ static void dbg_step_bp(debugger_t *dbg)
      */ 
     char key[17];
     snprintf(key, 17, "%lx", get_pc(dbg->pid));
-    printf("%s\n", key);
 
     size_t *data = NULL;
     if(hashtbl_search(dbg->dbe.hashtbl, key, (void **)&data)) {
-        printf("Found a bp\n");
         size_t idx = *data - 1;
         bp_disable(&dbg->dbe.bp[idx]);
         ptrace(PTRACE_SINGLESTEP, dbg->pid, NULL, NULL);
-        wait_for_signal(dbg->pid);
+        wait_for_signal(dbg);
         bp_enable(&dbg->dbe.bp[idx]);
     }
     return;
@@ -276,7 +325,7 @@ static bool do_continue(int argc, char *argv[])
 {   
     dbg_step_bp(tdb);
     ptrace(PTRACE_CONT, tdb->pid, NULL, NULL);
-    wait_for_signal(tdb->pid);
+    wait_for_signal(tdb);
 
     return true;
 }
@@ -356,21 +405,19 @@ static char **dbg_command_parser(debugger_t *dbg, char *cmd, int *argc)
     return _argv;
 }
 
-static uintptr_t addr_offset(debugger_t *dbg, uintptr_t addr)
-{
-    return addr - dbg->load_addr;
-}
-
 static void init_load_addr(debugger_t *dbg)
-{
+{   
+    /* WARNING: Here assumes Debuggee is dynamic library (PIE) */
     char path[MAX_BUFFER];
     snprintf(path, sizeof(path), "/proc/%d/maps", dbg->pid);
     FILE *f = fopen(path, "r");
     char *line = NULL;
     size_t len = 0;
-    getdelim(&line, &len, '-', f);
+    getdelim(&line, &len, '-', f);    
+
     sscanf(line, "%lx", &dbg->load_addr);
     fclose(f);
+    free(line);
 }
 
 void dbg_init(debugger_t *dbg, pid_t pid, const char *prog)
@@ -410,7 +457,6 @@ void dbg_init(debugger_t *dbg, pid_t pid, const char *prog)
 
 void dbg_run(debugger_t *dbg)
 {
-    wait_for_signal(dbg->pid);
 
     char *cmd = NULL;
     int argc = 0;

@@ -26,3 +26,4 @@ typedef struct {
 
 int dw_init(dw_context_t *dw_ctx, const char *prog);
 int dw_finish(dw_context_t *dw_ctx);
+void dw_print_source(dw_context_t *dw_ctx, uintptr_t addr);
