@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        /* Wait for lauching debuggee first */
+        /* debuggee must be launched first */
         int wait_status;
         int options = 0;
         waitpid(pid, &wait_status, options);

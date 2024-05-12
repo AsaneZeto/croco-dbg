@@ -25,7 +25,7 @@ void exec_prog(const char *prog)
 {
     personality(ADDR_NO_RANDOMIZE); /* Disable ASLR */
     if(ptrace(PTRACE_TRACEME, 0, 0, 0) < 0) {
-        fprintf(stderr, "Error in ptrace\n");
+        fprintf(stderr, "ERROR: tracing executable\n");
         return;
     }
     execl(prog, prog, NULL);

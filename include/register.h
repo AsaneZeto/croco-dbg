@@ -8,11 +8,13 @@
 #ifdef __x86_64__
 #define N_REG 27
 /* 
-A subset of DWARF Register Number Mapping (Keep relative order)
-with some replacement 
-Ref: 1. https://www.uclibc.org/docs/psABI-x86_64.pdf 
-     2. https://blog.tartanllama.xyz/writing-a-linux-debugger-registers
+ * A subset of DWARF Register Number Mapping (Keep relative order)
+ * with some replacements 
+ * Ref: 1. https://www.uclibc.org/docs/psABI-x86_64.pdf 
+ *      2. https://blog.tartanllama.xyz/writing-a-linux-debugger-registers
 */
+
+/* The layout follows usr/include/sys/user.h */
 typedef enum reg {
     r15, r14, r13, r12,
     rbp, rbx, r11, r10,
@@ -25,12 +27,11 @@ typedef enum reg {
 } reg_idx;
 
 typedef struct {
-    reg_idx r;        /* Register index for tinydbg */
-    int dwarf_r;      /* Real dwarf register number */
+    reg_idx r;        /* Register index for croco-dbg */
+    int dwarf_r;      /* Real DWARF register number */
     const char *name; /* Register name */
 } reg_descriptor_t;
 
-/* The layout follows usr/include/sys/user.h */
 static const reg_descriptor_t reg_descriptors[N_REG] = {
     { r15, 15, "r15" },
     { r14, 14, "r14" },

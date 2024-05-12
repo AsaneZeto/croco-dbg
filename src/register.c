@@ -7,20 +7,20 @@
 
 void reg_dump(pid_t pid)
 {   
-    printf("Dumping Registers:\n");
+    fprintf(stdout, "Dumping Registers:\n");
     struct user_regs_struct regs;
     ptrace(PTRACE_GETREGS, pid, NULL, &regs);
     size_t value = 0;
     for(size_t r = 0; r < N_REG; r++) {
         reg_get_value(pid, r, &value);
-        printf("%s: 0x%lx\n", reg_get_name(r), value);
+        fprintf(stdout, "%s: 0x%lx\n", reg_get_name(r), value);
     }
 }
 
 bool reg_get_value(pid_t pid, reg_idx r, size_t *value)
 {   
     if (r >= N_REG) {
-        fprintf(stderr, "Invalid register number.\n");
+        fprintf(stderr, "ERROR: Invalid register number\n");
         return false;
     }
 
@@ -78,7 +78,7 @@ reg_idx reg_get_idx_name(const char *name)
 bool reg_set_value(pid_t pid, reg_idx r, size_t value)
 {   
     if (r >= N_REG) {
-        fprintf(stderr, "Invalid register number.\n");
+        fprintf(stderr, "ERROR: Invalid register number\n");
         return false;
     }
 

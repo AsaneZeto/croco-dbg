@@ -15,14 +15,12 @@ typedef struct {
     struct list_head cus;
 } dw_context_t;
 
-
 typedef struct {
     Dwarf_Off off;
     Dwarf_Line *lines;
 	Dwarf_Signed n_lines;
     struct list_head list;
 } dw_cu_t;
-
 
 int dw_init(dw_context_t *dw_ctx, const char *prog);
 int dw_finish(dw_context_t *dw_ctx);

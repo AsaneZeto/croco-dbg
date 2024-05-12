@@ -17,7 +17,7 @@ void dbe_init(debuggee_t *dbe)
 bool dbe_set_bp(debuggee_t *dbe, uintptr_t *addr_p)
 {
     if(dbe->nBp + 1 > MAX_BP) {
-        fprintf(stderr, "The number of breakpoints reach max limis.\n");
+        fprintf(stderr, "ERROR: The number of breakpoints reach max limit\n");
         return false;
     }
      
@@ -25,13 +25,13 @@ bool dbe_set_bp(debuggee_t *dbe, uintptr_t *addr_p)
     bp_enable(&dbe->bp[dbe->nBp]);
 
     if(!hashtbl_add(dbe->hashtbl, dbe->bp[dbe->nBp].addr_key, (void*)&dbe->nBp)) {
-        fprintf(stderr, "Failed record breakpoint.\n");
+        fprintf(stderr, "ERROR: record breakpoint failed\n");
         return false;
     }
     
     dbe->nBp++;
 
-    printf("Set breakpoint at address 0x%lx\n", *addr_p);
+    fprintf(stdout, "Set breakpoint at address 0x%lx\n", *addr_p);
     return true;
 }
 
@@ -41,14 +41,14 @@ void dbe_dump_bp(debuggee_t *dbe)
         return;
     
     if(dbe->nBp == 0) {
-        fprintf(stderr, "No breakpoint exists.\n");
+        fprintf(stderr, "No breakpoint exists\n");
         return;
     }
     
     size_t *data = NULL;
     for(size_t i = 0; i < dbe->nBp; i++) {
         hashtbl_search(dbe->hashtbl, dbe->bp[i].addr_key, (void **) &data);
-        printf("Breakpoints %ld: 0x%s\n", *data - 1, dbe->bp[i].addr_key);
+        fprintf(stdout, "Breakpoints %ld: 0x%s\n", *data - 1, dbe->bp[i].addr_key);
     }
 }
 
@@ -64,7 +64,7 @@ bool dbe_write_mem(debuggee_t *dbe, uintptr_t addr, size_t value)
                     (void *)addr, value);
 
     if(ret == -1) {
-        fprintf(stderr, "ERROR: write memory.\n");
+        fprintf(stderr, "ERROR: write to memory.\n");
         return false;
     }
 

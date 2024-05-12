@@ -55,7 +55,7 @@ static void wait_for_signal(debugger_t *dbg)
             handle_sigtrap(dbg, siginfo);
             break;
         case SIGSEGV:
-            fprintf(stderr, "SIGSEGV, Signal code: %d\n", siginfo.si_code);
+            fprintf(stderr, "ERROR: SIGSEGV, Signal code: %d\n", siginfo.si_code);
             break;
         default:
             // fprintf(stdout, "Got signal %s\n", strsignal(siginfo.si_signo));
@@ -131,7 +131,7 @@ static bool dbg_add_option(debugger_t *dbg, char *cmd, char *opt,
     }
 
     if(ptr == &dbg->list) {
-        fprintf(stderr, "Failed adding %s option\n", cmd);
+        fprintf(stderr, "ERROR: adding %s option failed\n", cmd);
         return false;
     }
 
@@ -155,7 +155,7 @@ static bool dbg_read_mem(debugger_t *dbg, uintptr_t addr, size_t *data)
     long ret = ptrace(PTRACE_PEEKTEXT, dbg->pid, (void *)addr, NULL);
     
     if (ret == -1) {
-        fprintf(stderr, "Request error: Read memory\n");
+        fprintf(stderr, "ERROR: Read memory\n");
         return false;
     }
 
@@ -168,7 +168,7 @@ static bool dbg_write_mem(debugger_t *dbg, uintptr_t addr, size_t data)
     int ret = ptrace(PTRACE_POKETEXT, dbg->pid, (void *)addr, data);
 
     if (ret == -1) {
-        fprintf(stderr, "Request error: Write memory\n");
+        fprintf(stderr, "ERROR: Write memory\n");
         return false;
     }
 
@@ -178,7 +178,7 @@ static bool dbg_write_mem(debugger_t *dbg, uintptr_t addr, size_t data)
 static bool do_mem_read(int argc, char *argv[])
 {   
     if (strlen(argv[2]) == 0 || (argv[2][0] != '0' || argv[2][1] != 'x')) {
-        fprintf(stderr, "Invalid address.\n");
+        fprintf(stderr, "ERROR: Invalid address\n");
         return false;
     }
 
@@ -194,7 +194,7 @@ static bool do_mem_read(int argc, char *argv[])
 static bool do_mem_write(int argc, char *argv[])
 {   
     if (strlen(argv[2]) == 0 || (argv[2][0] != '0' || argv[2][1] != 'x')) {
-        fprintf(stderr, "Invalid address.\n");
+        fprintf(stderr, "ERROR: Invalid address\n");
         return false;
     }
 
@@ -205,7 +205,7 @@ static bool do_mem_write(int argc, char *argv[])
     size_t value = strtoul(argv[3], &end, 10);
 
     if ((end == argv[3]) || (*end != '\0')) {
-        fprintf(stderr, "Invalid value.\n");
+        fprintf(stderr, "ERROR: Invalid value\n");
         return false;
     }
 
@@ -221,7 +221,7 @@ static bool do_reg_dump(int argc, char *argv[])
 static bool do_reg_read(int argc, char *argv[])
 {
     if (strlen(argv[2]) == 0) {
-        fprintf(stderr, "Invalid register.\n");
+        fprintf(stderr, "ERROR: Invalid register\n");
         return false;
     }
 
@@ -236,7 +236,7 @@ static bool do_reg_read(int argc, char *argv[])
 static bool do_reg_write(int argc, char *argv[])
 {
     if (strlen(argv[2]) == 0) {
-        fprintf(stderr, "Invalid register.\n");
+        fprintf(stderr, "ERROR: Invalid register\n");
         return false;
     }
 
@@ -246,7 +246,7 @@ static bool do_reg_write(int argc, char *argv[])
     size_t value = strtoul(argv[3], &end, 10);
 
     if ((end == argv[3]) || (*end != '\0')) {
-        fprintf(stderr, "Invalid value.\n");
+        fprintf(stderr, "ERROR: Invalid value\n");
         return false;
     }
 
@@ -256,7 +256,7 @@ static bool do_reg_write(int argc, char *argv[])
 static bool do_reg_mem(int argc, char *argv[])
 {   
     if(argc < 2) {
-        fprintf(stderr, "Too few arguments\n");
+        fprintf(stderr, "ERROR: Too few arguments\n");
         return false;
     }
 
@@ -280,7 +280,7 @@ static bool do_break(int argc, char *argv[])
     /* Assume the address is Hexadecimal: 0xADDRESS */
 
     if(argc < 2) {
-        fprintf(stderr, "Too few arguments\n");
+        fprintf(stderr, "ERROR: Too few arguments\n");
         return false;
     }
 
@@ -393,7 +393,7 @@ static char **dbg_command_parser(debugger_t *dbg, char *cmd, int *argc)
         }
 
         if(_argc >= MAX_ARGC) {
-            fprintf(stderr, "The number of arguments exceeds the limit\n");
+            fprintf(stderr, "ERROR: The number of arguments exceeds the limit\n");
             return NULL;
         }
 
@@ -457,11 +457,10 @@ void dbg_init(debugger_t *dbg, pid_t pid, const char *prog)
 
 void dbg_run(debugger_t *dbg)
 {
-
     char *cmd = NULL;
     int argc = 0;
     char **argv = NULL;
-    while ((cmd = linenoise("tinydbg> ")) != NULL) {
+    while ((cmd = linenoise("croco-dbg> ")) != NULL) {
         argv = dbg_command_parser(dbg, cmd, &argc);
 
         if(!argv) {

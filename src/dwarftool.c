@@ -20,17 +20,17 @@ int dw_init(dw_context_t *dw_ctx, const char *prog)
     /* Start initializing DWARF information */
     if(dwarf_init(fd, DW_DLC_READ, dw_ctx->errhand, dw_ctx->errarg, 
                     &dw_ctx->dbg, &dw_ctx->error) != DW_DLV_OK) {
-		fprintf(stderr, "Giving up, cannot do DWARF processing\n");
+		fprintf(stderr, "ERROR: cannot do DWARF processing\n");
 		return -1;
 	}
 
     if (dwarf_get_aranges(dw_ctx->dbg, &dw_ctx->all_aranges, 
         &dw_ctx->n_aranges, &dw_ctx->error) != DW_DLV_OK) {
-        fprintf(stderr, "dwarf_get_aranges failed\n");
+        fprintf(stderr, "ERROR: dwarf_get_aranges failed\n");
         return -1;
     }
 
-    /* Only add when first retrieving a compilation units */ 
+    /* Only add a CU to list when first retrieving it */ 
     INIT_LIST_HEAD(&dw_ctx->cus);
 
     return 0;
@@ -48,7 +48,7 @@ int dw_finish(dw_context_t *dw_ctx)
     dwarf_dealloc(dw_ctx->dbg, dw_ctx->all_aranges, DW_DLA_LIST);
 
     if(dwarf_finish(dw_ctx->dbg, &dw_ctx->error) != DW_DLV_OK) {
-		fprintf(stderr, "dwarf_finish failed!\n");
+		fprintf(stderr, "ERROR: dwarf_finish failed!\n");
         return -1;
 	}
 
@@ -64,13 +64,13 @@ _find_cu_by_addr(dw_context_t *dw_ctx, dw_cu_t **ret_node, uintptr_t addr)
     Dwarf_Arange arange;
     if (dwarf_get_arange(dw_ctx->all_aranges, dw_ctx->n_aranges, addr,
         &arange, &dw_ctx->error) != DW_DLV_OK) {
-		fprintf(stderr, "get_arange failed\n");
+		fprintf(stderr, "ERROR: get_arange failed\n");
 		return;
 	}
 
     Dwarf_Off off = 0;
     if (dwarf_get_cu_die_offset(arange, &off, &dw_ctx->error) != DW_DLV_OK) {
-		fprintf(stderr, "get_cu_die_offset failed\n");
+		fprintf(stderr, "ERROR: get_cu_die_offset failed\n");
 		return;
 	}
 
@@ -83,17 +83,17 @@ _find_cu_by_addr(dw_context_t *dw_ctx, dw_cu_t **ret_node, uintptr_t addr)
         }
     }
 
-    /* First need this CU  */
+    /* First retrieving this CU  */
     Dwarf_Die cu_die;
     if(dwarf_offdie(dw_ctx->dbg, off, &cu_die, &dw_ctx->error) != DW_DLV_OK) {
-        fprintf(stderr, "get_cu_die_offset failed\n");
+        fprintf(stderr, "ERROR: get_cu_die_offset failed\n");
         return;
     };
 
     Dwarf_Line *lines = NULL;
     Dwarf_Signed n_lines = 0;
     if (dwarf_srclines(cu_die, &lines, &n_lines, &dw_ctx->error) != DW_DLV_OK) {
-        fprintf(stderr, "dwarf_srclines failed\n");
+        fprintf(stderr, "ERROR: dwarf_srclines failed\n");
         return;
     }
 
@@ -101,7 +101,7 @@ _find_cu_by_addr(dw_context_t *dw_ctx, dw_cu_t **ret_node, uintptr_t addr)
 
     dw_cu_t *cu_node = (dw_cu_t *) malloc(sizeof(dw_cu_t));
     if(!cu_node) {
-        fprintf(stderr, "Create CU node failed\n");
+        fprintf(stderr, "ERROR: Create CU node failed\n");
         return;
     }
     
@@ -134,7 +134,7 @@ _find_func_die_by_addr(dw_context_t *dw_ctx, Dwarf_Die cu_die,
                      !dwarf_highpc_b(cur_die, &highpc, NULL, NULL, &dw_ctx->error);
         
         if(ret_pc && lowpc <= addr && addr <= (lowpc + highpc)) {
-            /* Find target DIE */
+            /* Found target DIE */
             *ret_die = cur_die;
             return;
         }
@@ -163,13 +163,13 @@ void dw_get_func_die_by_addr(dw_context_t *dw_ctx, Dwarf_Die *ret_die, uintptr_t
     _find_cu_by_addr(dw_ctx, &cu, addr);
 
     if(!cu) {
-        fprintf(stderr, "Get CU failed\n");
+        fprintf(stderr, "ERROR: Get CU failed\n");
         return;
     }
 
     Dwarf_Die cu_die = 0;
     if (dwarf_offdie(dw_ctx->dbg, cu->off, &cu_die, &dw_ctx->error) != DW_DLV_OK) {
-		fprintf(stderr, "off_die failed\n");
+		fprintf(stderr, "ERROR: off_die failed\n");
 		return;
 	}
     _find_func_die_by_addr(dw_ctx, cu_die, ret_die, addr);
@@ -183,7 +183,7 @@ void dw_get_line_by_addr(dw_context_t *dw_ctx, Dwarf_Line *ret_line, uintptr_t a
     _find_cu_by_addr(dw_ctx, &cu, addr);
 
     if(!cu) {
-        fprintf(stderr, "Get CU failed\n");
+        fprintf(stderr, "ERROR: Get CU failed\n");
         return;
     }
 
@@ -220,7 +220,7 @@ void dw_print_source(dw_context_t *dw_ctx, uintptr_t addr)
     dw_get_func_die_by_addr(dw_ctx, &func_die, addr);
 
     if(!func_die) {
-        fprintf(stderr, "Get DIE failed\n");
+        fprintf(stderr, "ERROR: Get DIE failed\n");
         return;
     } 
 
@@ -231,7 +231,7 @@ void dw_print_source(dw_context_t *dw_ctx, uintptr_t addr)
     Dwarf_Line line_entry = NULL;
     dw_get_line_by_addr(dw_ctx, &line_entry, addr);
     if(!line_entry) {
-        fprintf(stderr, "Get line entry failed\n");
+        fprintf(stderr, "ERROR: Get line entry failed\n");
         return; 
     } 
 
@@ -241,7 +241,7 @@ void dw_print_source(dw_context_t *dw_ctx, uintptr_t addr)
     dwarf_linesrc(line_entry, &src_file, &dw_ctx->error);
 
     if(src_file == NULL) {
-        fprintf(stderr, "Get source file failed\n");
+        fprintf(stderr, "ERROR: Get source file failed\n");
     }
 
     _print_source(src_file, func_name, line_no);
