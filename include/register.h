@@ -1,5 +1,4 @@
-#ifndef REGISTER_H
-#define REGISTER_H
+#pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -77,6 +76,4 @@ reg_idx reg_get_idx_name(const char *name);
 
 #else
 #error "Unsupported Architecture"
-#endif
-
 #endif

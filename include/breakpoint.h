@@ -1,5 +1,4 @@
-#ifndef BREAKPOINT_H
-#define BREAKPOINT_H
+#pragma once
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -18,5 +17,3 @@ typedef struct {
 void bp_init(breakpoint_t *bp, pid_t pid, uintptr_t addr);
 void bp_enable(breakpoint_t *bp);
 void bp_disable(breakpoint_t *bp);
-
-#endif

@@ -1,4 +1,7 @@
-CFLAGS = -Wextra -Wall -Wno-unused-parameter -D_GNU_SOURCE -g -MMD -Iinclude -Iext/linenoise 
+CFLAGS = -Wextra -Wall -Wno-unused-parameter -D_GNU_SOURCE -g -MMD \
+         -Iinclude -Iext/linenoise 
+
+CLIBS = -ldwarf
 
 BUILDDIR ?= build
 CURDIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
@@ -20,10 +23,10 @@ vpath %.c $(sort $(dir $(CSRCS)))
 all: $(TARGET) $(EXP)
 
 $(BUILDDIR)/%.o: %.c
-	$(CC) -c $(CFLAGS) $< -o $@ 
+	$(CC) -c $(CFLAGS) $< -o $@ $(CLIBS)
 
 $(TARGET): $(COBJ)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@ $(CLIBS)
 
 $(EXP): $(EXPSRCS)
 	$(CC) -g $< -o $@

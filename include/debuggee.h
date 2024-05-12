@@ -1,5 +1,4 @@
-#ifndef DEBUGEE_H
-#define DEBUGEE_H
+#pragma once
 
 #include <stdint.h>
 #include "breakpoint.h"
@@ -17,5 +16,3 @@ bool dbe_set_bp(debuggee_t *dbe, uintptr_t *addr_p);
 void dbe_dump_bp(debuggee_t *dbe);
 size_t dbe_read_mem(debuggee_t *dbe, uintptr_t addr);
 bool dbe_write_mem(debuggee_t *dbe, uintptr_t addr, size_t value);
-
-#endif 

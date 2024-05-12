@@ -227,7 +227,6 @@ static bool do_break_dump(int argc, char *argv[])
 static bool do_break(int argc, char *argv[])
 {
     /* Assume the address is Hexadecimal: 0xADDRESS */
-    printf("%s\n", curr_cmd->cmd);
 
     if(argc < 2) {
         fprintf(stderr, "Too few arguments\n");
@@ -252,18 +251,18 @@ static bool do_break(int argc, char *argv[])
 
 static void dbg_step_bp(debugger_t *dbg)
 {   
-    /* Get next instruction */
-    size_t pc = 0;
-    reg_get_value(dbg->pid, rip, &pc);
-    uintptr_t addr = (uintptr_t)(pc - 1);
-    
+    /* 
+     * Check if PC is a breakpoint.
+     * If so, it indicates that we are currently
+     * at this position 
+     */ 
     char key[17];
-    snprintf(key, 17, "%lx", addr);
+    snprintf(key, 17, "%lx", get_pc(dbg->pid));
+    printf("%s\n", key);
+
     size_t *data = NULL;
     if(hashtbl_search(dbg->dbe.hashtbl, key, (void **)&data)) {
-        uintptr_t prev_inst = addr;
-        reg_set_value(dbg->pid, rip, (size_t)prev_inst);
-
+        printf("Found a bp\n");
         size_t idx = *data - 1;
         bp_disable(&dbg->dbe.bp[idx]);
         ptrace(PTRACE_SINGLESTEP, dbg->pid, NULL, NULL);
@@ -357,6 +356,11 @@ static char **dbg_command_parser(debugger_t *dbg, char *cmd, int *argc)
     return _argv;
 }
 
+static uintptr_t addr_offset(debugger_t *dbg, uintptr_t addr)
+{
+    return addr - dbg->load_addr;
+}
+
 static void init_load_addr(debugger_t *dbg)
 {
     char path[MAX_BUFFER];
@@ -396,6 +400,11 @@ void dbg_init(debugger_t *dbg, pid_t pid, const char *prog)
 
     dbe_init(&dbg->dbe);
 
+    if(dw_init(&dbg->dw_ctx, dbg->prog) == -1) {
+        dbg_close(dbg);
+        exit(0);
+    }
+
     tdb = dbg;
 }
 
@@ -431,6 +440,7 @@ void dbg_close(debugger_t *dbg)
     if(!dbg)
         return;
 
+    /* Free command node */
     cmd_element_t *ptr, *safe;
     cmd_opt_t *optr, *osafe;
     list_for_each_entry_safe (ptr, safe, &dbg->list, list) {
@@ -446,6 +456,11 @@ void dbg_close(debugger_t *dbg)
         free(ptr);
     }
 
+    /* Free debuggee */
     dbe_close(&dbg->dbe);
+
+    /* Free DWARF */
+    dw_finish(&dbg->dw_ctx);
+
     free(dbg);
 }

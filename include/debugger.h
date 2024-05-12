@@ -1,5 +1,4 @@
-#ifndef DEBUGGER_H
-#define DEBUGGER_H
+#pragma once
 
 #define MAX_BUFFER 1024
 #define MAX_ARGC 16
@@ -10,6 +9,7 @@
 
 #include "list.h"
 #include "debuggee.h"
+#include "dwarftool.h"
 
 typedef bool (*cmdhandler_t)(int argc, char *argv[]);
 
@@ -19,6 +19,7 @@ typedef struct {
     uintptr_t load_addr;      /* Program counter base */
     struct list_head list;    /* Each node represents a command */
     debuggee_t dbe;           /* Maintains debuge information */
+    dw_context_t dw_ctx;
 } debugger_t;
 
 typedef struct {
@@ -40,5 +41,3 @@ typedef struct {
 void dbg_init(debugger_t *dbg, pid_t pid, const char *prog);
 void dbg_run(debugger_t *dbg);
 void dbg_close(debugger_t *dbg);
-
-#endif
