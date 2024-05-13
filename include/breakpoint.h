@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <sys/types.h>
 
 #define MAX_BP 16

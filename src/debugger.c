@@ -1,14 +1,14 @@
+#include <signal.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
-#include <signal.h> 
-#include <sys/wait.h>
+#include <string.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 #include "debugger.h"
 #include "linenoise.h"
-#include "tools.h"
 #include "register.h"
+#include "tools.h"
 
 static debugger_t *crocodbg;
 static cmd_element_t *curr_cmd = NULL;
@@ -22,61 +22,63 @@ static uintptr_t addr_offset(debugger_t *dbg, uintptr_t addr)
 static void handle_sigtrap(debugger_t *dbg, siginfo_t info)
 {
     switch (info.si_code) {
-        case SI_KERNEL:
-        case TRAP_BRKPT:
-            /* IF trapped, set PC as current position */
-            set_pc(dbg->pid, get_pc(dbg->pid)-1);
+    case SI_KERNEL:
+    case TRAP_BRKPT:
+        /* IF trapped, set PC as current position */
+        set_pc(dbg->pid, get_pc(dbg->pid) - 1);
 
-            uintptr_t addr = get_pc(dbg->pid);
-            fprintf(stdout, "Hit breakpoint 0x%lx\n", addr);
-            dw_print_source(&dbg->dw_ctx, addr_offset(dbg, addr));
-            break;
-        case TRAP_TRACE:
-            break;
-        default:
-            break;
+        uintptr_t addr = get_pc(dbg->pid);
+        fprintf(stdout, "Hit breakpoint 0x%lx\n", addr);
+        dw_print_source(&dbg->dw_ctx, addr_offset(dbg, addr));
+        break;
+    case TRAP_TRACE:
+        break;
+    default:
+        break;
     }
 
     return;
 }
 
 static void wait_for_signal(debugger_t *dbg)
-{   
+{
     /* Parent handles the signals from child process */
     int wait_status;
     int options = 0;
     waitpid(dbg->pid, &wait_status, options);
 
     siginfo_t siginfo;
-    ptrace(PTRACE_GETSIGINFO, dbg->pid, NULL, &siginfo); /* Get signal from child */
+    ptrace(PTRACE_GETSIGINFO, dbg->pid, NULL,
+           &siginfo); /* Get signal from child */
 
     switch (siginfo.si_signo) {
-        case SIGTRAP:
-            handle_sigtrap(dbg, siginfo);
-            break;
-        case SIGSEGV:
-            fprintf(stderr, "ERROR: SIGSEGV, Signal code: %d\n", siginfo.si_code);
-            break;
-        default:
-            // fprintf(stdout, "Got signal %s\n", strsignal(siginfo.si_signo));
-            break;
+    case SIGTRAP:
+        handle_sigtrap(dbg, siginfo);
+        break;
+    case SIGSEGV:
+        fprintf(stderr, "ERROR: SIGSEGV, Signal code: %d\n", siginfo.si_code);
+        break;
+    default:
+        // fprintf(stdout, "Got signal %s\n", strsignal(siginfo.si_signo));
+        break;
     }
 }
 
 /* Find the command handler */
 static cmdhandler_t dbg_find_handler(char *cmd)
 {
-    if(!cmd)
+    if (!cmd)
         return NULL;
 
     cmd_element_t *ptr;
-    list_for_each_entry(ptr, &crocodbg->list, list) {
+    list_for_each_entry(ptr, &crocodbg->list, list)
+    {
         if (strcmp(cmd, ptr->abbr) == 0 || strcmp(cmd, ptr->cmd) == 0) {
-                curr_cmd = ptr;
-                return ptr->handler;
+            curr_cmd = ptr;
+            return ptr->handler;
         }
     }
-    
+
     return NULL;
 }
 
@@ -84,8 +86,9 @@ static cmdhandler_t dbg_find_handler(char *cmd)
 static cmdhandler_t _dbg_find_handler(struct list_head *head, char *opt)
 {
     cmd_opt_t *ptr;
-    list_for_each_entry(ptr, head, list) {
-        if(strcmp(opt, ptr->opt) == 0) {
+    list_for_each_entry(ptr, head, list)
+    {
+        if (strcmp(opt, ptr->opt) == 0) {
             return ptr->handler;
         }
     }
@@ -94,10 +97,13 @@ static cmdhandler_t _dbg_find_handler(struct list_head *head, char *opt)
 }
 
 
-static bool dbg_add_command(debugger_t *dbg, char *cmd, char *abbr,
-                            cmdhandler_t handler, char *description)
+static bool dbg_add_command(debugger_t *dbg,
+                            char *cmd,
+                            char *abbr,
+                            cmdhandler_t handler,
+                            char *description)
 {
-    cmd_element_t *node = (cmd_element_t *)malloc(sizeof(cmd_element_t));
+    cmd_element_t *node = (cmd_element_t *) malloc(sizeof(cmd_element_t));
 
     if (!node)
         return false;
@@ -114,28 +120,32 @@ static bool dbg_add_command(debugger_t *dbg, char *cmd, char *abbr,
     return true;
 }
 
-static bool dbg_add_option(debugger_t *dbg, char *cmd, char *opt, 
-                           cmdhandler_t handler, char *description)
-{   
-    if(!dbg)
+static bool dbg_add_option(debugger_t *dbg,
+                           char *cmd,
+                           char *opt,
+                           cmdhandler_t handler,
+                           char *description)
+{
+    if (!dbg)
         return false;
 
     struct list_head *ptr;
     cmd_element_t *node_cmd;
-    list_for_each(ptr, &dbg->list) {
+    list_for_each(ptr, &dbg->list)
+    {
         node_cmd = list_entry(ptr, cmd_element_t, list);
-        if(strcmp(cmd, node_cmd->cmd) == 0 ||
-           strcmp(cmd, node_cmd->abbr) == 0) {
+        if (strcmp(cmd, node_cmd->cmd) == 0 ||
+            strcmp(cmd, node_cmd->abbr) == 0) {
             break;
         }
     }
 
-    if(ptr == &dbg->list) {
+    if (ptr == &dbg->list) {
         fprintf(stderr, "ERROR: adding %s option failed\n", cmd);
         return false;
     }
 
-    cmd_opt_t *node_opt = (cmd_opt_t *)malloc(sizeof(cmd_opt_t));
+    cmd_opt_t *node_opt = (cmd_opt_t *) malloc(sizeof(cmd_opt_t));
 
     if (!node_opt)
         return false;
@@ -152,8 +162,8 @@ static bool dbg_add_option(debugger_t *dbg, char *cmd, char *opt,
 
 static bool dbg_read_mem(debugger_t *dbg, uintptr_t addr, size_t *data)
 {
-    long ret = ptrace(PTRACE_PEEKTEXT, dbg->pid, (void *)addr, NULL);
-    
+    long ret = ptrace(PTRACE_PEEKTEXT, dbg->pid, (void *) addr, NULL);
+
     if (ret == -1) {
         fprintf(stderr, "ERROR: Read memory\n");
         return false;
@@ -165,7 +175,7 @@ static bool dbg_read_mem(debugger_t *dbg, uintptr_t addr, size_t *data)
 
 static bool dbg_write_mem(debugger_t *dbg, uintptr_t addr, size_t data)
 {
-    int ret = ptrace(PTRACE_POKETEXT, dbg->pid, (void *)addr, data);
+    int ret = ptrace(PTRACE_POKETEXT, dbg->pid, (void *) addr, data);
 
     if (ret == -1) {
         fprintf(stderr, "ERROR: Write memory\n");
@@ -176,7 +186,7 @@ static bool dbg_write_mem(debugger_t *dbg, uintptr_t addr, size_t data)
 }
 
 static bool do_mem_read(int argc, char *argv[])
-{   
+{
     if (strlen(argv[2]) == 0 || (argv[2][0] != '0' || argv[2][1] != 'x')) {
         fprintf(stderr, "ERROR: Invalid address\n");
         return false;
@@ -192,7 +202,7 @@ static bool do_mem_read(int argc, char *argv[])
 }
 
 static bool do_mem_write(int argc, char *argv[])
-{   
+{
     if (strlen(argv[2]) == 0 || (argv[2][0] != '0' || argv[2][1] != 'x')) {
         fprintf(stderr, "ERROR: Invalid address\n");
         return false;
@@ -241,7 +251,7 @@ static bool do_reg_write(int argc, char *argv[])
     }
 
     reg_idx r = reg_get_idx_name(argv[2]);
-    
+
     char *end;
     size_t value = strtoul(argv[3], &end, 10);
 
@@ -254,14 +264,14 @@ static bool do_reg_write(int argc, char *argv[])
 }
 
 static bool do_reg_mem(int argc, char *argv[])
-{   
-    if(argc < 2) {
+{
+    if (argc < 2) {
         fprintf(stderr, "ERROR: Too few arguments\n");
         return false;
     }
 
     cmdhandler_t handler = _dbg_find_handler(&curr_cmd->options, argv[1]);
-    if(handler) {
+    if (handler) {
         return handler(argc, argv);
     }
 
@@ -270,7 +280,7 @@ static bool do_reg_mem(int argc, char *argv[])
 }
 
 static bool do_break_dump(int argc, char *argv[])
-{   
+{
     dbe_dump_bp(&crocodbg->dbe);
     return true;
 }
@@ -279,21 +289,29 @@ static bool do_break(int argc, char *argv[])
 {
     /* Assume the address is Hexadecimal: 0xADDRESS */
 
-    if(argc < 2) {
+    if (argc < 2) {
         fprintf(stderr, "ERROR: Too few arguments\n");
         return false;
     }
 
-    if(argv[1][0] == '0' && argv[1][1] == 'x') {
+    if (argv[1][0] == '0' && argv[1][1] == 'x') {
         uintptr_t addr = 0;
         sscanf(argv[1], "0x%lx", &addr);
         dbe_set_bp(&crocodbg->dbe, &addr);
 
         return true;
-    } 
+    } else if (strcmp(argv[1], "dump") != 0) {
+        /* FIXME: This should be compared with all option */
+        char symbol[MAX_BUFFER];
+        strncpy(symbol, argv[1], sizeof(symbol));
+        dbe_set_bp_symbol(&crocodbg->dbe, symbol);
 
+        return true;
+    }
+
+    /* Other options */
     cmdhandler_t handler = _dbg_find_handler(&curr_cmd->options, argv[1]);
-    if(handler)
+    if (handler)
         return handler(argc, argv);
 
     fprintf(stderr, "Unknown option\n");
@@ -301,17 +319,17 @@ static bool do_break(int argc, char *argv[])
 }
 
 static void dbg_step_bp(debugger_t *dbg)
-{   
-    /* 
+{
+    /*
      * Check if PC is a breakpoint.
      * If so, it indicates that we are currently
-     * at this position 
-     */ 
+     * at this position
+     */
     char key[17];
     snprintf(key, 17, "%lx", get_pc(dbg->pid));
 
     size_t *data = NULL;
-    if(hashtbl_search(dbg->dbe.hashtbl, key, (void **)&data)) {
+    if (hashtbl_search(dbg->dbe.hashtbl, key, (void **) &data)) {
         size_t idx = *data - 1;
         bp_disable(&dbg->dbe.bp[idx]);
         ptrace(PTRACE_SINGLESTEP, dbg->pid, NULL, NULL);
@@ -322,7 +340,7 @@ static void dbg_step_bp(debugger_t *dbg)
 }
 
 static bool do_continue(int argc, char *argv[])
-{   
+{
     dbg_step_bp(crocodbg);
     ptrace(PTRACE_CONT, crocodbg->pid, NULL, NULL);
     wait_for_signal(crocodbg);
@@ -331,7 +349,7 @@ static bool do_continue(int argc, char *argv[])
 }
 
 static bool do_quit(int argc, char *argv[])
-{   
+{
     dbg_close(crocodbg);
     exit(0);
 
@@ -339,13 +357,15 @@ static bool do_quit(int argc, char *argv[])
 }
 
 static bool do_help(int argc, char *argv[])
-{   
+{
     cmd_element_t *ptr;
-    list_for_each_entry(ptr, &crocodbg->list, list) {
+    list_for_each_entry(ptr, &crocodbg->list, list)
+    {
         printf("%s (%s): %s\n", ptr->cmd, ptr->abbr, ptr->description);
-        if(!list_empty(&ptr->options)) {
+        if (!list_empty(&ptr->options)) {
             cmd_opt_t *pptr;
-            list_for_each_entry(pptr, &ptr->options, list) {
+            list_for_each_entry(pptr, &ptr->options, list)
+            {
                 printf("\t%5s\n", pptr->description);
             }
         }
@@ -354,7 +374,8 @@ static bool do_help(int argc, char *argv[])
     return true;
 }
 
-static bool do_vmmap(int argc, char *argv[]) {
+static bool do_vmmap(int argc, char *argv[])
+{
     char path[MAX_BUFFER];
     snprintf(path, sizeof(path), "/proc/%d/maps", crocodbg->pid);
     FILE *f = fopen(path, "r");
@@ -362,12 +383,15 @@ static bool do_vmmap(int argc, char *argv[]) {
     size_t len = 0;
     ssize_t nread;
 
-    if(!f) {
-        fprintf(stderr, "ERROR: Access information of mapped memory region of process %d\n", crocodbg->pid);
+    if (!f) {
+        fprintf(
+            stderr,
+            "ERROR: Access information of mapped memory region of process %d\n",
+            crocodbg->pid);
         return false;
     }
 
-    while((nread = getline(&line, &len, f)) != -1) {
+    while ((nread = getline(&line, &len, f)) != -1) {
         printf("%s", line);
     }
 
@@ -377,23 +401,24 @@ static bool do_vmmap(int argc, char *argv[]) {
 }
 
 static char **dbg_command_parser(debugger_t *dbg, char *cmd, int *argc)
-{   
+{
     char _cmd[MAX_BUFFER];
-    strncpy(_cmd, cmd, strlen(cmd)+1);
+    strncpy(_cmd, cmd, strlen(cmd) + 1);
 
     char **_argv = calloc(MAX_ARGC, sizeof(char *));
     int _argc = 0;
     char *token = strtok(_cmd, " ");
 
-    while(token != NULL) {
+    while (token != NULL) {
         /* Skip multiple spaces */
-        if (strcmp(token, " ") == 0){
+        if (strcmp(token, " ") == 0) {
             token = strtok(NULL, " ");
             continue;
         }
 
-        if(_argc >= MAX_ARGC) {
-            fprintf(stderr, "ERROR: The number of arguments exceeds the limit\n");
+        if (_argc >= MAX_ARGC) {
+            fprintf(stderr,
+                    "ERROR: The number of arguments exceeds the limit\n");
             return NULL;
         }
 
@@ -406,14 +431,14 @@ static char **dbg_command_parser(debugger_t *dbg, char *cmd, int *argc)
 }
 
 static void init_load_addr(debugger_t *dbg)
-{   
+{
     /* WARNING: Here assumes Debuggee is dynamic library (PIE) */
     char path[MAX_BUFFER];
     snprintf(path, sizeof(path), "/proc/%d/maps", dbg->pid);
     FILE *f = fopen(path, "r");
     char *line = NULL;
     size_t len = 0;
-    getdelim(&line, &len, '-', f);    
+    getdelim(&line, &len, '-', f);
 
     sscanf(line, "%lx", &dbg->load_addr);
     fclose(f);
@@ -429,25 +454,33 @@ void dbg_init(debugger_t *dbg, pid_t pid, const char *prog)
 
     INIT_LIST_HEAD(&dbg->list);
     dbg_add_command(dbg, "help", "h", do_help, "Show command description");
-    dbg_add_command(dbg, "continue", "cont", do_continue, "Restart the stopped tracee process");
+    dbg_add_command(dbg, "continue", "cont", do_continue,
+                    "Restart the stopped tracee process");
     dbg_add_command(dbg, "quit", "q", do_quit, "Quit tinydbg");
     dbg_add_command(dbg, "break", "b", do_break, "Set breakpoint");
-    dbg_add_option(dbg, "break", "dump", do_break_dump, "Dump: all breakpoint (if any)");
+    dbg_add_option(dbg, "break", "dump", do_break_dump,
+                   "Dump: all breakpoint (if any)");
 
     dbg_add_command(dbg, "reg", "r", do_reg_mem, "Register oprations");
-    dbg_add_option(dbg, "reg", "dump", do_reg_dump, "dump: Dump all register information");
-    dbg_add_option(dbg, "reg", "read", do_reg_read, "read {register}: Read value from a register");
-    dbg_add_option(dbg, "reg", "write", do_reg_write, "write {register} {VALUE}: Write value to a register");
+    dbg_add_option(dbg, "reg", "dump", do_reg_dump,
+                   "dump: Dump all register information");
+    dbg_add_option(dbg, "reg", "read", do_reg_read,
+                   "read {register}: Read value from a register");
+    dbg_add_option(dbg, "reg", "write", do_reg_write,
+                   "write {register} {VALUE}: Write value to a register");
 
     dbg_add_command(dbg, "mem", "m", do_reg_mem, "Memory oprations");
-    dbg_add_option(dbg, "mem", "read", do_mem_read, "read {0xADDRESS}: Read value from an address");
-    dbg_add_option(dbg, "mem", "write", do_mem_write, "write {0xADDRESS} {VALUE}: Write value to an address");
+    dbg_add_option(dbg, "mem", "read", do_mem_read,
+                   "read {0xADDRESS}: Read value from an address");
+    dbg_add_option(dbg, "mem", "write", do_mem_write,
+                   "write {0xADDRESS} {VALUE}: Write value to an address");
 
-    dbg_add_command(dbg, "vmmap", "vmmap", do_vmmap, "Show virtual memory layout");
+    dbg_add_command(dbg, "vmmap", "vmmap", do_vmmap,
+                    "Show virtual memory layout");
 
     dbe_init(&dbg->dbe);
 
-    if(dw_init(&dbg->dw_ctx, dbg->prog) == -1) {
+    if (dw_init(&dbg->dw_ctx, dbg->prog) == -1) {
         dbg_close(dbg);
         exit(0);
     }
@@ -463,15 +496,15 @@ void dbg_run(debugger_t *dbg)
     while ((cmd = linenoise("croco> ")) != NULL) {
         argv = dbg_command_parser(dbg, cmd, &argc);
 
-        if(!argv) {
+        if (!argv) {
             fprintf(stderr, "Error: Parse command\n");
             continue;
         }
 
         cmdhandler_t handler = dbg_find_handler(argv[0]);
-        if(handler)
+        if (handler)
             handler(argc, argv);
-        else 
+        else
             fprintf(stderr, "Unknown Command.\n");
 
         linenoiseHistoryAdd(cmd);
@@ -481,17 +514,19 @@ void dbg_run(debugger_t *dbg)
 }
 
 void dbg_close(debugger_t *dbg)
-{   
-    if(!dbg)
+{
+    if (!dbg)
         return;
 
     /* Free command node */
     cmd_element_t *ptr, *safe;
     cmd_opt_t *optr, *osafe;
-    list_for_each_entry_safe (ptr, safe, &dbg->list, list) {
+    list_for_each_entry_safe(ptr, safe, &dbg->list, list)
+    {
         if (!list_empty(&ptr->options)) {
             /* Free option nodes first if any */
-            list_for_each_entry_safe(optr, osafe, &ptr->options, list) {
+            list_for_each_entry_safe(optr, osafe, &ptr->options, list)
+            {
                 list_del(&optr->list);
                 free(optr);
             }

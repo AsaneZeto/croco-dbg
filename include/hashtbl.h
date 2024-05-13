@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 typedef struct {
-    struct hsearch_data htab; 
+    struct hsearch_data htab;
     size_t size;
 } hashtbl_t;
 
