@@ -10,7 +10,7 @@
 #include "tools.h"
 #include "register.h"
 
-static debugger_t *tdb;
+static debugger_t *crocodbg;
 static cmd_element_t *curr_cmd = NULL;
 
 
@@ -70,7 +70,7 @@ static cmdhandler_t dbg_find_handler(char *cmd)
         return NULL;
 
     cmd_element_t *ptr;
-    list_for_each_entry(ptr, &tdb->list, list) {
+    list_for_each_entry(ptr, &crocodbg->list, list) {
         if (strcmp(cmd, ptr->abbr) == 0 || strcmp(cmd, ptr->cmd) == 0) {
                 curr_cmd = ptr;
                 return ptr->handler;
@@ -185,7 +185,7 @@ static bool do_mem_read(int argc, char *argv[])
     uintptr_t addr = 0;
     size_t value;
     sscanf(argv[2], "0x%lx", &addr);
-    dbg_read_mem(tdb, addr, &value);
+    dbg_read_mem(crocodbg, addr, &value);
     printf("%s: %ld\n", argv[2], value);
 
     return true;
@@ -209,12 +209,12 @@ static bool do_mem_write(int argc, char *argv[])
         return false;
     }
 
-    return dbg_write_mem(tdb, addr, value);
+    return dbg_write_mem(crocodbg, addr, value);
 }
 
 static bool do_reg_dump(int argc, char *argv[])
 {
-    reg_dump(tdb->pid);
+    reg_dump(crocodbg->pid);
     return true;
 }
 
@@ -227,7 +227,7 @@ static bool do_reg_read(int argc, char *argv[])
 
     reg_idx r = reg_get_idx_name(argv[2]);
     size_t value;
-    reg_get_value(tdb->pid, r, &value);
+    reg_get_value(crocodbg->pid, r, &value);
     printf("%s: 0x%lx\n", argv[2], value);
 
     return true;
@@ -250,7 +250,7 @@ static bool do_reg_write(int argc, char *argv[])
         return false;
     }
 
-    return reg_set_value(tdb->pid, r, value);
+    return reg_set_value(crocodbg->pid, r, value);
 }
 
 static bool do_reg_mem(int argc, char *argv[])
@@ -271,7 +271,7 @@ static bool do_reg_mem(int argc, char *argv[])
 
 static bool do_break_dump(int argc, char *argv[])
 {   
-    dbe_dump_bp(&tdb->dbe);
+    dbe_dump_bp(&crocodbg->dbe);
     return true;
 }
 
@@ -287,7 +287,7 @@ static bool do_break(int argc, char *argv[])
     if(argv[1][0] == '0' && argv[1][1] == 'x') {
         uintptr_t addr = 0;
         sscanf(argv[1], "0x%lx", &addr);
-        dbe_set_bp(&tdb->dbe, &addr);
+        dbe_set_bp(&crocodbg->dbe, &addr);
 
         return true;
     } 
@@ -323,16 +323,16 @@ static void dbg_step_bp(debugger_t *dbg)
 
 static bool do_continue(int argc, char *argv[])
 {   
-    dbg_step_bp(tdb);
-    ptrace(PTRACE_CONT, tdb->pid, NULL, NULL);
-    wait_for_signal(tdb);
+    dbg_step_bp(crocodbg);
+    ptrace(PTRACE_CONT, crocodbg->pid, NULL, NULL);
+    wait_for_signal(crocodbg);
 
     return true;
 }
 
 static bool do_quit(int argc, char *argv[])
 {   
-    dbg_close(tdb);
+    dbg_close(crocodbg);
     exit(0);
 
     return true;
@@ -341,7 +341,7 @@ static bool do_quit(int argc, char *argv[])
 static bool do_help(int argc, char *argv[])
 {   
     cmd_element_t *ptr;
-    list_for_each_entry(ptr, &tdb->list, list) {
+    list_for_each_entry(ptr, &crocodbg->list, list) {
         printf("%s (%s): %s\n", ptr->cmd, ptr->abbr, ptr->description);
         if(!list_empty(&ptr->options)) {
             cmd_opt_t *pptr;
@@ -356,14 +356,14 @@ static bool do_help(int argc, char *argv[])
 
 static bool do_vmmap(int argc, char *argv[]) {
     char path[MAX_BUFFER];
-    snprintf(path, sizeof(path), "/proc/%d/maps", tdb->pid);
+    snprintf(path, sizeof(path), "/proc/%d/maps", crocodbg->pid);
     FILE *f = fopen(path, "r");
     char *line = NULL;
     size_t len = 0;
     ssize_t nread;
 
     if(!f) {
-        fprintf(stderr, "ERROR: Access information of mapped memory region of process %d\n", tdb->pid);
+        fprintf(stderr, "ERROR: Access information of mapped memory region of process %d\n", crocodbg->pid);
         return false;
     }
 
@@ -452,7 +452,7 @@ void dbg_init(debugger_t *dbg, pid_t pid, const char *prog)
         exit(0);
     }
 
-    tdb = dbg;
+    crocodbg = dbg;
 }
 
 void dbg_run(debugger_t *dbg)
@@ -460,7 +460,7 @@ void dbg_run(debugger_t *dbg)
     char *cmd = NULL;
     int argc = 0;
     char **argv = NULL;
-    while ((cmd = linenoise("croco-dbg> ")) != NULL) {
+    while ((cmd = linenoise("croco> ")) != NULL) {
         argv = dbg_command_parser(dbg, cmd, &argc);
 
         if(!argv) {

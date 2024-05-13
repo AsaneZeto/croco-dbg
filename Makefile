@@ -13,7 +13,7 @@ EXPSRCS = $(shell find ./examples -name '*.c')
 EXP = $(EXPSRCS:%.c=%)
 _COBJ = $(notdir $(CSRCS))
 COBJ = $(_COBJ:%.c=$(BUILDDIR)/%.o)
-TARGET = tinydbg
+TARGET = croco
 
 
 vpath %.c $(sort $(dir $(CSRCS)))

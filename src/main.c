@@ -32,7 +32,11 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        /* debuggee must be launched first */
+        /* Debuggee must be launched first.
+         * When the traced process is launched, 
+         * it will be sent a SIGTRAP signal, 
+         * which is a trace or breakpoint trap.
+         */
         int wait_status;
         int options = 0;
         waitpid(pid, &wait_status, options);
