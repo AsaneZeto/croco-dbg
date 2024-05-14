@@ -14,6 +14,8 @@ void dbe_init(debuggee_t *dbe);
 void dbe_close(debuggee_t *dbe);
 bool dbe_set_bp(debuggee_t *dbe, uintptr_t *addr_p);
 bool dbe_set_bp_symbol(debuggee_t *dbe, char *symbol);
+bool dbe_set_bp_srcline(debuggee_t *dbe, char *srcline);
+bool dbe_set_bp_line(debuggee_t *dbe, int line);
 void dbe_dump_bp(debuggee_t *dbe);
 size_t dbe_read_mem(debuggee_t *dbe, uintptr_t addr);
 bool dbe_write_mem(debuggee_t *dbe, uintptr_t addr, size_t value);

@@ -20,7 +20,12 @@ Launch Croco with you executable, enjoy it!
 '''
 # Commands
 * help (h): Show command description
-* break (b)  [dump/0xADDRESS]: Set a memory address as a breakpoint
+* break (b): Breakpoint-relative operations
+    * [dump]: Show all existed breakpoints
+    * [0xADDRESS]: Set a memory address as a breakpoint
+    * [line_number]: Set a breakpoint at line [line_number] in the source file where main function resides
+    * [source_file:line_number]: Set a breakpoint at line [line_number] in [source_file]
+    * [function_name]: Set a breakpoint just before the start of function_name 
 * continue (cont): Restart the stopped tracee process
 * reg (r): Register oprations
     * dump: Dump all register information

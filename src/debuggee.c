@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ptrace.h>
 #include <unistd.h>
 
@@ -15,15 +16,9 @@ void dbe_init(debuggee_t *dbe)
     dbe->nBp = 0;
 }
 
-bool dbe_set_bp(debuggee_t *dbe, uintptr_t *addr_p)
+static bool _dbe_set_bp(debuggee_t *dbe, uintptr_t addr)
 {
-    if (dbe->nBp + 1 > MAX_BP) {
-        fprintf(stderr, "ERROR: The number of breakpoints reach max limit\n");
-        return false;
-    }
-
-    bp_init(&dbe->bp[dbe->nBp], container_of(dbe, debugger_t, dbe)->pid,
-            *addr_p);
+    bp_init(&dbe->bp[dbe->nBp], container_of(dbe, debugger_t, dbe)->pid, addr);
     bp_enable(&dbe->bp[dbe->nBp]);
 
     if (!hashtbl_add(dbe->hashtbl, dbe->bp[dbe->nBp].addr_key,
@@ -33,6 +28,21 @@ bool dbe_set_bp(debuggee_t *dbe, uintptr_t *addr_p)
     }
 
     dbe->nBp++;
+    return true;
+}
+
+/* FIXME: Extract duplicated code */
+bool dbe_set_bp(debuggee_t *dbe, uintptr_t *addr_p)
+{
+    if (dbe->nBp + 1 > MAX_BP) {
+        fprintf(stderr, "ERROR: The number of breakpoints reach max limit\n");
+        return false;
+    }
+
+    if(!_dbe_set_bp(dbe, *addr_p)) {
+        fprintf(stdout, "Set breakpoint failed\n");
+        return false;
+    }
 
     fprintf(stdout, "Set breakpoint at address 0x%lx\n", *addr_p);
     return true;
@@ -46,7 +56,7 @@ bool dbe_set_bp_symbol(debuggee_t *dbe, char *symbol)
     }
 
     uintptr_t addr = 0;
-    if (!dw_get_func_sym_addr(&container_of(dbe, debugger_t, dbe)->dw_ctx,
+    if (!dw_get_addr_by_func_sym(&container_of(dbe, debugger_t, dbe)->dw_ctx,
                               symbol, &addr)) {
         fprintf(stderr, "ERROR: Cannot find the address of %s\n", symbol);
         return false;
@@ -54,18 +64,67 @@ bool dbe_set_bp_symbol(debuggee_t *dbe, char *symbol)
 
     addr = container_of(dbe, debugger_t, dbe)->load_addr + addr;
 
-    bp_init(&dbe->bp[dbe->nBp], container_of(dbe, debugger_t, dbe)->pid, addr);
-    bp_enable(&dbe->bp[dbe->nBp]);
-
-    if (!hashtbl_add(dbe->hashtbl, dbe->bp[dbe->nBp].addr_key,
-                     (void *) &dbe->nBp)) {
-        fprintf(stderr, "ERROR: record breakpoint failed\n");
+    if(!_dbe_set_bp(dbe, addr)) {
+        fprintf(stdout, "Set breakpoint failed\n");
         return false;
     }
 
-    dbe->nBp++;
-
     fprintf(stdout, "Set breakpoint at %s() (0x%lx)\n", symbol, addr);
+    return true;
+}
+
+bool dbe_set_bp_srcline(debuggee_t *dbe, char *srcline)
+{
+    if (dbe->nBp + 1 > MAX_BP) {
+        fprintf(stderr, "ERROR: The number of breakpoints reach max limit\n");
+        return false;
+    }
+
+    uintptr_t addr = 0;
+    /* For output message */
+    char *srcline2 = strdup(srcline); 
+    char *file_name = strtok(srcline2, ":");
+    char *line_str = strtok(NULL, ":");
+    if (!dw_get_addr_by_srcline(&container_of(dbe, debugger_t, dbe)->dw_ctx,
+                                srcline, &addr)) {
+        fprintf(stdout, "ERROR: Cannot find the address of %s, in %s\n", line_str, file_name);
+        return false;
+    }
+
+    addr = container_of(dbe, debugger_t, dbe)->load_addr + addr;
+
+    if(!_dbe_set_bp(dbe, addr)) {
+        fprintf(stdout, "Set breakpoint failed\n");
+        return false;
+    }
+
+    fprintf(stdout, "Set breakpoint at line %s, in %s\n", line_str, file_name);
+    free(srcline2);
+    return true;
+}
+
+bool dbe_set_bp_line(debuggee_t *dbe, int line)
+{
+    if (dbe->nBp + 1 > MAX_BP) {
+        fprintf(stderr, "ERROR: The number of breakpoints reach max limit\n");
+        return false;
+    }
+
+    uintptr_t addr = 0;
+    if (!dw_get_addr_by_line(&container_of(dbe, debugger_t, dbe)->dw_ctx,
+                                line, &addr)) {
+        fprintf(stderr, "ERROR: Cannot find the address of line %d\n", line);
+        return false;
+    }
+
+    addr = container_of(dbe, debugger_t, dbe)->load_addr + addr;
+
+    if(!_dbe_set_bp(dbe, addr)) {
+        fprintf(stdout, "Set breakpoint failed\n");
+        return false;
+    }
+
+    fprintf(stdout, "Set breakpoint at line %d\n", line);
     return true;
 }
 

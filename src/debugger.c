@@ -294,19 +294,21 @@ static bool do_break(int argc, char *argv[])
         return false;
     }
 
-    if (argv[1][0] == '0' && argv[1][1] == 'x') {
-        uintptr_t addr = 0;
-        sscanf(argv[1], "0x%lx", &addr);
-        dbe_set_bp(&crocodbg->dbe, &addr);
-
-        return true;
-    } else if (strcmp(argv[1], "dump") != 0) {
-        /* FIXME: This should be compared with all option */
-        char symbol[MAX_BUFFER];
-        strncpy(symbol, argv[1], sizeof(symbol));
-        dbe_set_bp_symbol(&crocodbg->dbe, symbol);
-
-        return true;
+    uintptr_t addr = 0;
+    char buffer[MAX_BUFFER];
+    switch(parse_break_arg(argv[1])) {
+        case BP_HEXADDR:
+            sscanf(argv[1], "0x%lx", &addr);
+            return dbe_set_bp(&crocodbg->dbe, &addr);
+        case BP_SRCLINE:
+            strncpy(buffer, argv[1], sizeof(buffer));
+            return dbe_set_bp_srcline(&crocodbg->dbe, buffer);
+        case BP_LINE:
+            int line = atoi(argv[1]);
+            return dbe_set_bp_line(&crocodbg->dbe, line);
+        case BP_SYMBOL:
+            strncpy(buffer, argv[1], sizeof(buffer));
+            return dbe_set_bp_symbol(&crocodbg->dbe, buffer);
     }
 
     /* Other options */
@@ -432,7 +434,7 @@ static char **dbg_command_parser(debugger_t *dbg, char *cmd, int *argc)
 
 static void init_load_addr(debugger_t *dbg)
 {
-    /* WARNING: Here assumes Debuggee is dynamic library (PIE) */
+    /* WARNING: Here assumes debuggee (traced process) is dynamic library (PIE) */
     char path[MAX_BUFFER];
     snprintf(path, sizeof(path), "/proc/%d/maps", dbg->pid);
     FILE *f = fopen(path, "r");
@@ -457,23 +459,27 @@ void dbg_init(debugger_t *dbg, pid_t pid, const char *prog)
     dbg_add_command(dbg, "continue", "cont", do_continue,
                     "Restart the stopped tracee process");
     dbg_add_command(dbg, "quit", "q", do_quit, "Quit tinydbg");
-    dbg_add_command(dbg, "break", "b", do_break, "Set breakpoint");
+    dbg_add_command(dbg, "break", "b", do_break, "Set breakpoint\n"
+                                                  "\t[0xADDRESS]: Set a memory address as a breakpoint\n"
+                                                  "\t[line_number]: Set a breakpoint at line [line_number] in the source file where main function resides\n"
+                                                  "\t[source_file:line_number]: Set a breakpoint at line [line_number] in [source_file]\n"
+                                                  "\t[function_name]: Set a breakpoint just before the start of function_name");
     dbg_add_option(dbg, "break", "dump", do_break_dump,
-                   "Dump: all breakpoint (if any)");
+                   "Dump: Show all existed breakpoints");
 
     dbg_add_command(dbg, "reg", "r", do_reg_mem, "Register oprations");
     dbg_add_option(dbg, "reg", "dump", do_reg_dump,
                    "dump: Dump all register information");
     dbg_add_option(dbg, "reg", "read", do_reg_read,
-                   "read {register}: Read value from a register");
+                   "read [REGISTER]: Read value from a register");
     dbg_add_option(dbg, "reg", "write", do_reg_write,
-                   "write {register} {VALUE}: Write value to a register");
+                   "write [REGISTER] [VALUE]: Write value to a register");
 
     dbg_add_command(dbg, "mem", "m", do_reg_mem, "Memory oprations");
     dbg_add_option(dbg, "mem", "read", do_mem_read,
-                   "read {0xADDRESS}: Read value from an address");
+                   "read [0xADDRESS]: Read value from an address");
     dbg_add_option(dbg, "mem", "write", do_mem_write,
-                   "write {0xADDRESS} {VALUE}: Write value to an address");
+                   "write [0xADDRESS] [VALUE]: Write value to an address");
 
     dbg_add_command(dbg, "vmmap", "vmmap", do_vmmap,
                     "Show virtual memory layout");

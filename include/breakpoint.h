@@ -6,6 +6,11 @@
 
 #define MAX_BP 16
 
+#define BP_HEXADDR 1
+#define BP_SRCLINE 2
+#define BP_LINE 3
+#define BP_SYMBOL 4
+
 typedef struct {
     pid_t pid;
     uintptr_t addr;

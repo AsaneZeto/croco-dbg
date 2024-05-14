@@ -12,3 +12,4 @@
 void exec_prog(const char *prog);
 uintptr_t get_pc(pid_t pid);
 void set_pc(pid_t pid, uintptr_t addr);
+int parse_break_arg(const char *arg);

@@ -9,6 +9,8 @@
 #include <dwarf.h>
 #include "dwarftool.h"
 
+#define MAX_BUFFER 1024
+
 static bool _dw_add_cu_node(dw_context_t *dw_ctx, Dwarf_Die *cu_die)
 {
     /* Get section-relative offset of CU die */
@@ -193,6 +195,81 @@ static bool _find_func_die_by_symbol(dw_context_t *dw_ctx,
     return found;
 }
 
+static bool _find_cu_by_symbol(dw_context_t *dw_ctx,
+                               dw_cu_t **ret_node,
+                               const char *symbol)
+{
+    dw_cu_t *ptr;
+    Dwarf_Die cu_die, dumb_die; /* Don't care function DIE */
+    Dwarf_Off off;
+    list_for_each_entry(ptr, &dw_ctx->cus, list)
+    {
+        off = ptr->off;
+        if (dwarf_offdie(dw_ctx->dbg, off, &cu_die, &dw_ctx->error) ==
+            DW_DLV_OK) {
+            bool got =
+                _find_func_die_by_symbol(dw_ctx, cu_die, &dumb_die, symbol);
+            dwarf_dealloc(dw_ctx->dbg, cu_die, DW_DLA_DIE);
+            /* Check ret_die got */
+            if (got) {
+                *ret_node = ptr;
+                dwarf_dealloc(dw_ctx->dbg, dumb_die, DW_DLA_DIE);
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+static void _print_source(char *src_file, char *func_name, int lineno)
+{
+    FILE *f = fopen(src_file, "r");
+    char *line = NULL;
+    size_t len = 0;
+    int nread = 0;
+    while (nread < lineno && (getline(&line, &len, f) != -1)) {
+        nread++;
+    }
+
+    fprintf(stdout, "Stopped at line %d, in %s():\n", lineno, func_name);
+    fprintf(stdout, "%s\n", line);
+    fclose(f);
+}
+
+void dw_print_source(dw_context_t *dw_ctx, uintptr_t addr)
+{
+    Dwarf_Die func_die = NULL;
+    dw_get_func_die_by_addr(dw_ctx, &func_die, addr);
+
+    if (!func_die) {
+        fprintf(stderr, "ERROR: Get DIE failed\n");
+        return;
+    }
+
+    char *func_name = NULL;
+    dwarf_diename(func_die, &func_name, &dw_ctx->error);
+    dwarf_dealloc(dw_ctx->dbg, func_die, DW_DLA_DIE);
+
+    Dwarf_Line line_entry = NULL;
+    dw_get_line_by_addr(dw_ctx, &line_entry, addr);
+    if (!line_entry) {
+        fprintf(stderr, "ERROR: Get line entry failed\n");
+        return;
+    }
+
+    Dwarf_Unsigned line_no = 0;
+    char *src_file = NULL;
+    dwarf_lineno(line_entry, &line_no, &dw_ctx->error);
+    dwarf_linesrc(line_entry, &src_file, &dw_ctx->error);
+
+    if (src_file == NULL) {
+        fprintf(stderr, "ERROR: Get source file failed\n");
+    }
+
+    _print_source(src_file, func_name, line_no);
+}
+
 int dw_init(dw_context_t *dw_ctx, const char *prog)
 {
     int fd = -1;
@@ -318,7 +395,7 @@ bool dw_get_line_by_addr(dw_context_t *dw_ctx,
     return false;
 }
 
-bool dw_get_func_sym_addr(dw_context_t *dw_ctx,
+bool dw_get_addr_by_func_sym(dw_context_t *dw_ctx,
                           const char *func_name,
                           uintptr_t *addr)
 {
@@ -342,50 +419,126 @@ bool dw_get_func_sym_addr(dw_context_t *dw_ctx,
     return true;
 }
 
-static void _print_source(char *src_file, char *func_name, int lineno)
+bool dw_get_cu_by_file_name(dw_context_t *dw_ctx,
+                            dw_cu_t **ret_node,
+                            const char *file_name)
 {
-    FILE *f = fopen(src_file, "r");
-    char *line = NULL;
-    size_t len = 0;
-    int nread = 0;
-    while (nread < lineno && (getline(&line, &len, f) != -1)) {
-        nread++;
+    dw_cu_t *ptr;
+    Dwarf_Die cu_die;
+    list_for_each_entry(ptr, &dw_ctx->cus, list)
+    {
+        if (dwarf_offdie(dw_ctx->dbg, ptr->off, &cu_die, &dw_ctx->error) ==
+            DW_DLV_OK) {
+            char **file_names = NULL;
+            Dwarf_Signed fn_count = 0;
+            dwarf_srcfiles(cu_die, &file_names, &fn_count, &dw_ctx->error);
+
+            if (file_names != NULL) {
+                for (Dwarf_Signed i = 0; i < fn_count; i++) {
+                    if (strcmp(file_name, file_names[i]) == 0) {
+                        *ret_node = ptr;
+                        dwarf_dealloc(dw_ctx->dbg, cu_die, DW_DLA_DIE);
+                        return true;
+                    }
+                }
+            }
+
+            dwarf_dealloc(dw_ctx->dbg, cu_die, DW_DLA_DIE);
+        }
     }
 
-    fprintf(stdout, "Stopped at line %d, in %s():\n", lineno, func_name);
-    fprintf(stdout, "%s\n", line);
-    fclose(f);
+    return false;
 }
 
-void dw_print_source(dw_context_t *dw_ctx, uintptr_t addr)
+bool dw_get_addr_by_srcline(dw_context_t *dw_ctx,
+                             const char *srcline,
+                             uintptr_t *addr)
 {
-    Dwarf_Die func_die = NULL;
-    dw_get_func_die_by_addr(dw_ctx, &func_die, addr);
+    char *buffer = strdup(srcline);
 
-    if (!func_die) {
-        fprintf(stderr, "ERROR: Get DIE failed\n");
-        return;
+    char *file_name = strtok(buffer, ":");
+    if (file_name == NULL)
+        return false;
+
+    char *line_str = strtok(NULL, ":");
+    if (line_str == NULL)
+        return false;
+
+    int line, pos;
+    int ret = sscanf(line_str, "%d%n", &line, &pos);
+    if ((ret == 0) || ((size_t) pos != strlen(line_str)))
+        return false;
+
+    char file_path[MAX_BUFFER];
+    char *exist = realpath(file_name, file_path);
+    if (exist == NULL) {
+        fprintf(stderr, "ERROR: Cannot find the path to %s\n", file_name);
+        return false;
     }
 
-    char *func_name = NULL;
-    dwarf_diename(func_die, &func_name, &dw_ctx->error);
-    dwarf_dealloc(dw_ctx->dbg, func_die, DW_DLA_DIE);
-
-    Dwarf_Line line_entry = NULL;
-    dw_get_line_by_addr(dw_ctx, &line_entry, addr);
-    if (!line_entry) {
-        fprintf(stderr, "ERROR: Get line entry failed\n");
-        return;
+    /* Find the CU node for the given file name */
+    dw_cu_t *cu_node = NULL;
+    dw_get_cu_by_file_name(dw_ctx, &cu_node, file_path);
+    if (cu_node == NULL) {
+        fprintf(stderr, "ERROR: Cannot find CU related to %s\n", file_name);
+        return false;
     }
 
-    Dwarf_Unsigned line_no = 0;
-    char *src_file = NULL;
-    dwarf_lineno(line_entry, &line_no, &dw_ctx->error);
-    dwarf_linesrc(line_entry, &src_file, &dw_ctx->error);
-
-    if (src_file == NULL) {
-        fprintf(stderr, "ERROR: Get source file failed\n");
+    if (line > cu_node->n_lines) {
+        fprintf(stderr, "ERROR: Out of line range in %s\n", file_name);
+        return false;
     }
 
-    _print_source(src_file, func_name, line_no);
+    /* Find address of the given line number */
+    Dwarf_Addr ret_addr = 0;
+    Dwarf_Unsigned lineno = 0;
+    for (Dwarf_Signed i = 0; i < cu_node->n_lines; i++) {
+        if (dwarf_lineno(cu_node->lines[i], &lineno, &dw_ctx->error) !=
+            DW_DLV_OK) {
+            continue;
+        }
+
+        if ((int) lineno == line &&
+            dwarf_lineaddr(cu_node->lines[i], &ret_addr, &dw_ctx->error) ==
+                DW_DLV_OK) {
+            /* Got target address */
+            *addr = (uintptr_t) ret_addr;
+            return true;
+        }
+    }
+
+
+    fprintf(stderr, "ERROR: Get address of line %d in %s failed\n", line,
+            file_name);
+    return false;
+}
+
+
+bool dw_get_addr_by_line(dw_context_t *dw_ctx,
+                         int line,
+                         uintptr_t *addr)
+{   
+    dw_cu_t *cu_node;
+    if(_find_cu_by_symbol(dw_ctx, &cu_node, "main") == false) {
+        fprintf(stderr, "Found main faile\n");
+        return false;
+    }
+
+    Dwarf_Die cu_die;
+    if (dwarf_offdie(dw_ctx->dbg, cu_node->off, &cu_die, &dw_ctx->error) !=
+        DW_DLV_OK) {
+        fprintf(stderr, "ERROR: offdie failed\n");
+        return false;
+    }
+
+    char *file_name = NULL;
+    if(dwarf_diename(cu_die, &file_name, &dw_ctx->error) != DW_DLV_OK) {
+        fprintf(stderr, "ERROR: Get DIE name failed\n");
+        return false;
+    }
+
+
+    char srcline[MAX_BUFFER];
+    snprintf(srcline, sizeof(srcline), "%s:%d", file_name, line);
+    return dw_get_addr_by_srcline(dw_ctx, srcline, addr);
 }

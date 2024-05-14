@@ -26,6 +26,8 @@ typedef struct {
 int dw_init(dw_context_t *dw_ctx, const char *prog);
 int dw_finish(dw_context_t *dw_ctx);
 
+void dw_print_source(dw_context_t *dw_ctx, uintptr_t addr);
+
 /* Get the function DIE of the symbol */
 bool dw_get_func_die_by_symbol(dw_context_t *dw_ctx,
                                Dwarf_Die *ret_die,
@@ -41,8 +43,15 @@ bool dw_get_line_by_addr(dw_context_t *dw_ctx,
                          uintptr_t addr);
 
 /* Get address of a function symbol */
-bool dw_get_func_sym_addr(dw_context_t *dw_ctx,
+bool dw_get_addr_by_func_sym(dw_context_t *dw_ctx,
                           const char *func_name,
                           uintptr_t *addr);
 
-void dw_print_source(dw_context_t *dw_ctx, uintptr_t addr);
+
+bool dw_get_addr_by_srcline(dw_context_t *dw_ctx,
+                             const char *srcline,
+                             uintptr_t *addr);
+
+bool dw_get_addr_by_line(dw_context_t *dw_ctx,
+                         int line,
+                         uintptr_t *addr);
