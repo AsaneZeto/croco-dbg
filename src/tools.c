@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 #include "debugger.h"
 #include "dwarftool.h"

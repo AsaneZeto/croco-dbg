@@ -295,6 +295,7 @@ static bool do_break(int argc, char *argv[])
     }
 
     uintptr_t addr = 0;
+    int line = 0;
     char buffer[MAX_BUFFER];
     switch(parse_break_arg(argv[1])) {
         case BP_HEXADDR:
@@ -304,7 +305,7 @@ static bool do_break(int argc, char *argv[])
             strncpy(buffer, argv[1], sizeof(buffer));
             return dbe_set_bp_srcline(&crocodbg->dbe, buffer);
         case BP_LINE:
-            int line = atoi(argv[1]);
+            line = atoi(argv[1]);
             return dbe_set_bp_line(&crocodbg->dbe, line);
         case BP_SYMBOL:
             strncpy(buffer, argv[1], sizeof(buffer));

@@ -2,22 +2,22 @@
 Croco-dbg is a tiny debugger for x86-64 Linux based on ptrace and FreeBSD libraries 
 
 # Build and Start
-At first, get a clone of linenoise
-'''
+At first, get a clone of [linenoise](https://github.com/antirez/linenoise)
+```
 git submodule update --init
-'''
+```
 (Optional) Install FreeBSD library if you don't have them in your system
-'''
-sudo get-apt install libelf libdw-dev libdwarf
-'''
+```
+sudo apt-get install libelf-dev libdw-dev libdwarf-dev
+```
 Then just make it.
-'''
+```
 make
-'''
+```
 Launch Croco with you executable, enjoy it! 
-'''
+```
 ./croco [executable]
-'''
+```
 # Commands
 * help (h): Show command description
 * break (b): Breakpoint-relative operations
